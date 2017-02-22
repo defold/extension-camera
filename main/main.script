@@ -1,0 +1,39 @@
+
+function init(self)
+    local logosize = 128
+    local screen_width = sys.get_config("display.width", 600)
+    local screen_height = sys.get_config("display.height", 800)
+    local scale_width = screen_width / logosize
+    local scale_height = screen_height / logosize
+    
+    go.set("#sprite", "scale", vmath.vector3(scale_width, scale_height, 1) )
+    
+    if camera ~= nil and camera.start_capture(camera.CAMERA_TYPE_FRONT) then
+        self.cameraframe = camera.get_frame()
+        self.camerainfo = camera.get_info()
+        
+        self.cameratextureheader = {width=self.camerainfo.width,
+                                    height=self.camerainfo.height,
+                                    type=resource.TEXTURE_TYPE_2D,
+                                    format=resource.TEXTURE_FORMAT_RGB,
+                                    num_mip_maps=1 }
+    else
+        print("could not start camera capture")
+    end
+end
+
+function final(self)
+    if self.cameraframe ~= nil then
+        camera.stop_capture()
+    end
+end
+
+
+function update(self, dt)
+    if self.cameraframe then
+        local pathmodelcamera = go.get("#sprite", "texture0")
+        resource.set_texture(pathmodelcamera, self.cameratextureheader, self.cameraframe)
+    end
+    
+    
+end
