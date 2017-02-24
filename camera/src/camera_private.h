@@ -2,6 +2,13 @@
 
 #include <dmsdk/sdk.h>
 
+enum CaptureQuality
+{
+	CAPTURE_QUALITY_LOW,
+	CAPTURE_QUALITY_MEDIUM,
+	CAPTURE_QUALITY_HIGH,
+};
+
 enum CameraType
 {
 	CAMERA_TYPE_FRONT, // Selfie
@@ -15,6 +22,5 @@ struct CameraInfo
     CameraType m_Type;
 };
 
-extern int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CameraInfo& outparams);
+extern int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams);
 extern int CameraPlatform_StopCapture();
-

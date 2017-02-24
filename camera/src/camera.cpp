@@ -36,22 +36,15 @@ static int StartCapture(lua_State* L)
     DM_LUA_STACK_CHECK(L, 1);
 
     CameraType type = (CameraType) luaL_checkint(L, 1);
+    CaptureQuality quality = (CaptureQuality)luaL_checkint(L, 2);
 
-	int status = CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, g_DefoldCamera.m_Params);
+	int status = CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality, g_DefoldCamera.m_Params);
 
 	lua_pushboolean(L, status > 0);
 	if( status == 0 )
 	{
-        printf("capture failed!\n");
+        dmLogError("capture failed!\n");
 		return 1;
-	}
-
-    const uint32_t size = g_DefoldCamera.m_Params.m_Width * g_DefoldCamera.m_Params.m_Height;
-
-    {
-	    uint8_t* data = 0;
-	    uint32_t datasize = 0;
-	    dmBuffer::GetBytes(g_DefoldCamera.m_VideoBuffer, (void**)&data, &datasize);
 	}
 
     // Increase ref count
@@ -100,7 +93,7 @@ static int GetInfo(lua_State* L)
 static int GetFrame(lua_State* L)
 {
     DM_LUA_STACK_CHECK(L, 1);
-    lua_rawgeti(L,LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef);
+    lua_rawgeti(L,LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); 
     return 1;
 }
 
@@ -125,6 +118,10 @@ static void LuaInit(lua_State* L)
 
     SETCONSTANT(CAMERA_TYPE_FRONT)
     SETCONSTANT(CAMERA_TYPE_BACK)
+
+    SETCONSTANT(CAPTURE_QUALITY_LOW)
+    SETCONSTANT(CAPTURE_QUALITY_MEDIUM)
+    SETCONSTANT(CAPTURE_QUALITY_HIGH)
 
 #undef SETCONSTANT
 

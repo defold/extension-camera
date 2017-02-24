@@ -18,7 +18,6 @@
 	@private AVCaptureDevice*			m_camera;
 	@private AVCaptureDeviceInput* 		m_cameraInput;
 	@private AVCaptureVideoDataOutput*	m_videoOutput;
-	@private dispatch_queue_t 			m_Queue;
 	@public  CMVideoDimensions 			m_Size;
 }
 @end
@@ -86,8 +85,8 @@ IOSCamera g_Camera;
 
 	    if( width != g_Camera.m_Delegate->m_Size.width || height != g_Camera.m_Delegate->m_Size.height )
 	    {
-	    	CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
-	    	return;
+            CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+            return;
 	    }
 
 	    uint8_t* pixels = (uint8_t*)CVPixelBufferGetBaseAddress(imageBuffer);
@@ -99,9 +98,9 @@ IOSCamera g_Camera;
 	    		// RGB < BGR(A)
 #if defined(DM_PLATFORM_IOS)
                 // Flip X
-	    		data[y*width*3 + x*3 + 2] = pixels[y * bytesPerRow + bytesPerRow - (x+1) * 4 + 0];
-	    		data[y*width*3 + x*3 + 1] = pixels[y * bytesPerRow + bytesPerRow - (x+1) * 4 + 1];
-	    		data[y*width*3 + x*3 + 0] = pixels[y * bytesPerRow + bytesPerRow - (x+1) * 4 + 2];
+                data[y*width*3 + x*3 + 2] = pixels[y * bytesPerRow + bytesPerRow - (x+1) * 4 + 0];
+                data[y*width*3 + x*3 + 1] = pixels[y * bytesPerRow + bytesPerRow - (x+1) * 4 + 1];
+                data[y*width*3 + x*3 + 0] = pixels[y * bytesPerRow + bytesPerRow - (x+1) * 4 + 2];
 #else
                 // Flip X + Y
                 data[y*width*3 + x*3 + 2] = pixels[(height - y - 1) * bytesPerRow + bytesPerRow - (x+1) * 4 + 0];
@@ -122,7 +121,7 @@ IOSCamera g_Camera;
        fromConnection:(AVCaptureConnection *)connection
 {
 
-	NSLog(@"DROPPING FRAME!!!");
+	//NSLog(@"DROPPING FRAME!!!");
 }
 
 
@@ -214,7 +213,7 @@ IOSCamera g_Camera;
 
     // 4. Set up the video output
     // 4.1. Do we care about missing frames?
-    m_videoOutput.alwaysDiscardsLateVideoFrames = NO;
+    m_videoOutput.alwaysDiscardsLateVideoFrames = YES;
 
     // 4.2. We want the frames in some RGB format, which is what ActionScript can deal with
     NSNumber * framePixelFormat = [ NSNumber numberWithInt: kCVPixelFormatType_32BGRA ];
@@ -225,8 +224,8 @@ IOSCamera g_Camera;
     [ m_captureSession addOutput: m_videoOutput ];
 }
 
-
 - ( BOOL ) startCamera: (AVCaptureDevicePosition) cameraPosition
+                  quality: (CaptureQuality)quality         
 {
     // 1. Find the back camera
     if ( ![ self findCamera: cameraPosition ] )
@@ -241,9 +240,16 @@ IOSCamera g_Camera;
     }
 
     // 3. Choose a preset for the session.
-    // Optional TODO: You can parameterize this and set it in ActionScript.
-    //NSString * cameraResolutionPreset = AVCaptureSessionPreset640x480;
-    NSString * cameraResolutionPreset = AVCaptureSessionPreset1280x720;
+    NSString * cameraResolutionPreset;
+    switch(quality)
+    {
+        case CAPTURE_QUALITY_LOW:       cameraResolutionPreset = AVCaptureSessionPresetLow; break;
+        case CAPTURE_QUALITY_MEDIUM:    cameraResolutionPreset = AVCaptureSessionPresetMedium; break;
+        case CAPTURE_QUALITY_HIGH:      cameraResolutionPreset = AVCaptureSessionPresetHigh; break;
+        default:
+            dmLogError("Unknown quality setting: %d", quality);
+            return false;
+    }
 
     // 4. Check if the preset is supported on the device by asking the capture session:
     if ( ![ m_captureSession canSetSessionPreset: cameraResolutionPreset ] )
@@ -260,6 +266,10 @@ IOSCamera g_Camera;
 
     // 6. Add the video output
     [ self setupVideoOutput ];
+
+    // Get camera size
+    CMFormatDescriptionRef formatDescription = m_camera.activeFormat.formatDescription;
+    g_Camera.m_Delegate->m_Size = CMVideoFormatDescriptionGetDimensions(formatDescription);
 
     // 7. Set up a callback, so we are notified when the camera actually starts
     [ [ NSNotificationCenter defaultCenter ] addObserver: self
@@ -291,59 +301,7 @@ IOSCamera g_Camera;
 @end
 
 
-// http://stackoverflow.com/a/32047525
-CMVideoDimensions _CameraPlatform_GetSize(AVCaptureDevicePosition cameraPosition)
-{
-    CMVideoDimensions max_resolution;
-    max_resolution.width = 0;
-    max_resolution.height = 0;
-
-    AVCaptureDevice* captureDevice = nil;
-
-    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
-    for (AVCaptureDevice *device in devices) {
-        
-        /*
-        const char* position = "unspecified";
-        if( device.position == AVCaptureDevicePositionBack )
-            position = "back";
-        else if (device.position == AVCaptureDevicePositionFront )
-            position = "front";
-
-        NSString* localizedName = [NSString stringWithFormat:@"%@,  position: %s", device.localizedName, position];
-        NSLog(@"%@", localizedName);
-        */
-
-        if ([device position] == cameraPosition) {
-            captureDevice = device;
-            break;
-        }
-    }
-    if (captureDevice == nil) {
-        return max_resolution;
-    }
-
-    NSArray* availFormats=captureDevice.formats;
-
-    for (AVCaptureDeviceFormat* format in availFormats) {
-#if defined(DM_PLATFORM_IOS)
-        CMVideoDimensions resolution = format.highResolutionStillImageDimensions;
-#else
-        CMVideoDimensions resolution = CMVideoFormatDescriptionGetDimensions((CMVideoFormatDescriptionRef)[format formatDescription]);
-#endif
-        int w = resolution.width;
-        int h = resolution.height;
-        if ((w * h) > (max_resolution.width * max_resolution.height)) {
-            max_resolution.width = w;
-            max_resolution.height = h;
-        }
-    }
-
-	return max_resolution;
-}
-
-
-int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CameraInfo& outparams)
+int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
 {
 
 	if(g_Camera.m_Delegate == 0)
@@ -358,23 +316,20 @@ int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Came
     else if( type == CAMERA_TYPE_FRONT )
         cameraposition = AVCaptureDevicePositionFront;
 #endif
-	CMVideoDimensions dimensions = _CameraPlatform_GetSize(cameraposition);
 
-	g_Camera.m_Delegate->m_Size = dimensions;
+	BOOL started = [g_Camera.m_Delegate startCamera: cameraposition quality: quality];
 
-    outparams.m_Width = (uint32_t)dimensions.width;
-    outparams.m_Height = (uint32_t)dimensions.height;
+    outparams.m_Width = (uint32_t)g_Camera.m_Delegate->m_Size.width;
+    outparams.m_Height = (uint32_t)g_Camera.m_Delegate->m_Size.height;
 
     uint32_t size = outparams.m_Width * outparams.m_Width;
     dmBuffer::StreamDeclaration streams_decl[] = {
-        {dmHashString64("data"), dmBuffer::VALUE_TYPE_UINT8, 3}
+        {dmHashString64("rgb"), dmBuffer::VALUE_TYPE_UINT8, 3}
     };
 
     dmBuffer::Allocate(size, streams_decl, 1, buffer);
 
-	g_Camera.m_VideoBuffer = *buffer;
-
-	BOOL started = [g_Camera.m_Delegate startCamera: cameraposition];
+    g_Camera.m_VideoBuffer = *buffer;
 
     return started ? 1 : 0;
 }
@@ -384,9 +339,9 @@ int CameraPlatform_StopCapture()
 	if(g_Camera.m_Delegate != 0)
 	{
         [g_Camera.m_Delegate stopCamera];
-    	[g_Camera.m_Delegate release];
+        [g_Camera.m_Delegate release];
 	}
 	return 1;
 }
 
-#endif // DM_PLATFORM_IOS
+#endif // DM_PLATFORM_IOS/DM_PLATFORM_OSX
