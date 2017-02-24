@@ -5,6 +5,10 @@
 
 #include <AVFoundation/AVFoundation.h>
 
+#if defined(DM_PLATFORM_IOS)
+#include <UIKit/UIKit.h>
+#endif
+
 // Some good reads on capturing camera/video for iOS/macOS
 //   http://easynativeextensions.com/camera-tutorial-part-4-connect-to-the-camera-in-objective-c/
 //   https://developer.apple.com/library/content/qa/qa1702/_index.html
@@ -28,7 +32,7 @@ struct IOSCamera
 	dmBuffer::HBuffer m_VideoBuffer;
 	// TODO: Support audio buffers
 
-	IOSCamera() : m_Delegate(0)
+	IOSCamera() : m_Delegate(0), m_VideoBuffer(0)
 	{
 	}
 };
@@ -70,7 +74,7 @@ IOSCamera g_Camera;
          didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
          fromConnection:(AVCaptureConnection *)connection
 {
-    if( captureOutput == m_videoOutput )
+    if( captureOutput == m_videoOutput && g_Camera.m_VideoBuffer != 0 )
     {
 	    uint8_t* data = 0;
 	    uint32_t datasize = 0;
@@ -85,6 +89,7 @@ IOSCamera g_Camera;
 
 	    if( width != g_Camera.m_Delegate->m_Size.width || height != g_Camera.m_Delegate->m_Size.height )
 	    {
+            //printf("img width/height: %d, %d\n", width, height);
             CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
             return;
 	    }
@@ -97,10 +102,10 @@ IOSCamera g_Camera;
 	    	{
 	    		// RGB < BGR(A)
 #if defined(DM_PLATFORM_IOS)
-                // Flip X
-                data[y*width*3 + x*3 + 2] = pixels[y * bytesPerRow + bytesPerRow - (x+1) * 4 + 0];
-                data[y*width*3 + x*3 + 1] = pixels[y * bytesPerRow + bytesPerRow - (x+1) * 4 + 1];
-                data[y*width*3 + x*3 + 0] = pixels[y * bytesPerRow + bytesPerRow - (x+1) * 4 + 2];
+                // Flip Y
+                data[y*width*3 + x*3 + 2] = pixels[(height - y - 1) * bytesPerRow + x * 4 + 0];
+                data[y*width*3 + x*3 + 1] = pixels[(height - y - 1) * bytesPerRow + x * 4 + 1];
+                data[y*width*3 + x*3 + 0] = pixels[(height - y - 1) * bytesPerRow + x * 4 + 2];
 #else
                 // Flip X + Y
                 data[y*width*3 + x*3 + 2] = pixels[(height - y - 1) * bytesPerRow + bytesPerRow - (x+1) * 4 + 0];
@@ -222,7 +227,51 @@ IOSCamera g_Camera;
 
     // 5. Add the video data output to the capture session
     [ m_captureSession addOutput: m_videoOutput ];
+
+
+#if defined(DM_PLATFORM_IOS)
+    AVCaptureConnection *conn = [m_videoOutput connectionWithMediaType:AVMediaTypeVideo];
+
+    AVCaptureVideoOrientation videoOrientation;
+    switch ([UIDevice currentDevice].orientation) {
+        case UIDeviceOrientationLandscapeLeft:
+            videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+            break;
+        case UIDeviceOrientationLandscapeRight:
+            videoOrientation = AVCaptureVideoOrientationLandscapeRight;
+            break;
+        case UIDeviceOrientationPortraitUpsideDown:
+            videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+            break;
+        case AVCaptureVideoOrientationPortrait:
+        default:
+            videoOrientation = AVCaptureVideoOrientationPortrait;
+            break;
+    }
+
+    conn.videoOrientation = videoOrientation;
+#endif
 }
+
+
+static CMVideoDimensions FlipCoords(AVCaptureVideoDataOutput* output, const CMVideoDimensions& in)
+{
+    CMVideoDimensions out = in; 
+#if defined(DM_PLATFORM_IOS)
+    AVCaptureConnection* conn = [output connectionWithMediaType:AVMediaTypeVideo];
+    switch (conn.videoOrientation) {
+        case AVCaptureVideoOrientationPortraitUpsideDown:
+        case AVCaptureVideoOrientationPortrait:
+            out.width = in.height;
+            out.height = in.width;
+            break;
+        default:
+            break;
+    }
+#endif
+    return out;
+}
+
 
 - ( BOOL ) startCamera: (AVCaptureDevicePosition) cameraPosition
                   quality: (CaptureQuality)quality         
@@ -271,6 +320,9 @@ IOSCamera g_Camera;
     CMFormatDescriptionRef formatDescription = m_camera.activeFormat.formatDescription;
     g_Camera.m_Delegate->m_Size = CMVideoFormatDescriptionGetDimensions(formatDescription);
 
+    // In case we have a portrait mode, let's flip the coords
+    g_Camera.m_Delegate->m_Size = FlipCoords(m_videoOutput, g_Camera.m_Delegate->m_Size);
+
     // 7. Set up a callback, so we are notified when the camera actually starts
     [ [ NSNotificationCenter defaultCenter ] addObserver: self
                                                 selector: @selector( onVideoStart: )
@@ -300,10 +352,8 @@ IOSCamera g_Camera;
 
 @end
 
-
 int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
 {
-
 	if(g_Camera.m_Delegate == 0)
 	{
 		g_Camera.m_Delegate	= [[CameraCaptureDelegate alloc] init];
@@ -322,7 +372,7 @@ int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Capt
     outparams.m_Width = (uint32_t)g_Camera.m_Delegate->m_Size.width;
     outparams.m_Height = (uint32_t)g_Camera.m_Delegate->m_Size.height;
 
-    uint32_t size = outparams.m_Width * outparams.m_Width;
+    uint32_t size = outparams.m_Width * outparams.m_Height;
     dmBuffer::StreamDeclaration streams_decl[] = {
         {dmHashString64("rgb"), dmBuffer::VALUE_TYPE_UINT8, 3}
     };

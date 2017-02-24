@@ -10,8 +10,16 @@ function init(self)
     
     if camera ~= nil then
 
-        --if camera.start_capture(camera.CAMERA_TYPE_FRONT, camera.CAPTURE_QUALITY_MEDIUM) then
-        if camera.start_capture(camera.CAMERA_TYPE_BACK, camera.CAPTURE_QUALITY_MEDIUM) then
+        local sysinfo = sys.get_sys_info()
+        
+        local quality = camera.CAPTURE_QUALITY_HIGH
+        local type = camera.CAMERA_TYPE_FRONT
+        if sysinfo.system_name == 'iPhone OS' then
+            type = camera.CAMERA_TYPE_BACK
+            quality = camera.CAPTURE_QUALITY_MEDIUM
+        end
+        
+        if camera.start_capture(type, quality) then
 	        self.cameraframe = camera.get_frame()
 	        self.camerainfo = camera.get_info()
 	        print("Initialized camera")
