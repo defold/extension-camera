@@ -377,7 +377,7 @@ int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Capt
         {dmHashString64("rgb"), dmBuffer::VALUE_TYPE_UINT8, 3}
     };
 
-    dmBuffer::Allocate(size, streams_decl, 1, buffer);
+    dmBuffer::Create(size, streams_decl, 1, buffer);
 
     g_Camera.m_VideoBuffer = *buffer;
 
@@ -390,6 +390,9 @@ int CameraPlatform_StopCapture()
 	{
         [g_Camera.m_Delegate stopCamera];
         [g_Camera.m_Delegate release];
+
+        dmBuffer::Destroy(g_Camera.m_VideoBuffer);
+        g_Camera.m_VideoBuffer = 0;
 	}
 	return 1;
 }
