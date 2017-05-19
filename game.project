@@ -23,6 +23,7 @@ bundle_identifier = com.defold.camera
 
 [android]
 package = com.defold.camera
+manifest = /AndroidManifest.xml
 
 [osx]
 bundle_identifier = com.defold.camera

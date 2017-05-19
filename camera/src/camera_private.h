@@ -19,7 +19,7 @@ struct CameraInfo
 {
 	uint32_t   m_Width;
 	uint32_t   m_Height;
-    CameraType m_Type;
+	CameraType m_Type;
 };
 
 extern int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams);

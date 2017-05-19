@@ -11,7 +11,7 @@
 #define DLIB_LOG_DOMAIN LIB_NAME
 #include <dmsdk/sdk.h>
 
-#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_OSX)
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_OSX) || defined(DM_PLATFORM_ANDROID)
 
 #include "camera_private.h"
 
@@ -94,7 +94,7 @@ static int GetInfo(lua_State* L)
 static int GetFrame(lua_State* L)
 {
     DM_LUA_STACK_CHECK(L, 1);
-    lua_rawgeti(L,LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); 
+    lua_rawgeti(L,LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef);
     return 1;
 }
 
