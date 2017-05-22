@@ -66,29 +66,7 @@ AndroidCamera g_Camera;
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL Java_com_defold_android_camera_CameraExtension_helloworld(JNIEnv *env, jobject obj)  {
-  dmLogError("Hello World!\n");
-  return;
-}
-
-JNIEXPORT void JNICALL Java_com_defold_android_camera_CameraExtension_sendPicture(JNIEnv *env, jobject obj, jbyteArray array)  {
-  dmLogError("send Picture!\n");
-
-  uint8_t* data = 0;
-  uint32_t datasize = 0;
-  dmBuffer::GetBytes(g_Camera.m_VideoBuffer, (void**)&data, &datasize);
-
-  int len = env->GetArrayLength(array);
-  dmLogError("sendPicture received array length %d expected %d", len, datasize);
-  //unsigned char* buf = new unsigned char[len];
-  env->GetByteArrayRegion (array, 0, len, reinterpret_cast<jbyte*>(data));
-
-  dmBuffer::ValidateBuffer(g_Camera.m_VideoBuffer);
-  return;
-}
-
-
-
+// http://www.equasys.de/colorconversion.html
 JNIEXPORT void JNICALL Java_com_defold_android_camera_CameraExtension_handleCameraFrame(JNIEnv *env, jobject obj, jbyteArray yuv420sp, jint width, jint height) {
   uint8_t* data = 0;
   uint32_t datasize = 0;
@@ -145,6 +123,7 @@ JNIEXPORT void JNICALL Java_com_defold_android_camera_CameraExtension_handleCame
       data++;
       data[0] = B;
       data++;
+      pixPtr++;
       //data[(pixPtr * 3) + 0] = R;
       //data[(pixPtr * 3) + 1] = G;
       //data[(pixPtr * 3) + 2] = B;

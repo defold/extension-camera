@@ -99,95 +99,7 @@ class CameraExtension implements Camera.PreviewCallback {
     return openCamera(Camera.CameraInfo.CAMERA_FACING_BACK);
   }
 
-  private native void helloworld();
-
-  private native void sendPicture(byte[] picture);
-
   private native void handleCameraFrame(byte[] cameraFrame, int width, int height);
-
-  //Method from Ketai project!
-  private void decodeYUV420SP(byte[] rgb, byte[] yuv420sp, int width, int height) {
-    final int frameSize = width * height;
-
-    for (int j = 0, yp = 0; j < height; j++) {
-      int uvp = frameSize + (j >> 1) * width;
-      int u = 0;
-      int v = 0;
-      for (int i = 0; i < width; i++, yp++) {
-        int y = (0xff & ((int) yuv420sp[yp])) - 16;
-        if (y < 0) {
-          y = 0;
-        }
-        if ((i & 1) == 0) {
-          v = (0xff & yuv420sp[uvp++]) - 128;
-          u = (0xff & yuv420sp[uvp++]) - 128;
-        }
-
-        int y1192 = 1192 * y;
-        int r = (y1192 + 1634 * v);
-        int g = (y1192 - 833 * v - 400 * u);
-        int b = (y1192 + 2066 * u);
-
-        if (r < 0) {
-          r = 0;
-        }
-        else if (r > 262143) {
-          r = 262143;
-        }
-
-        if (g < 0) {
-          g = 0;
-        }
-        else if (g > 262143) {
-          g = 262143;
-        }
-
-        if (b < 0) {
-          b = 0;
-        }
-        else if (b > 262143) {
-          b = 262143;
-        }
-
-        int pixel = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
-        rgb[(yp * 3)+0] = (byte)(pixel & 0x00ff0000);
-        rgb[(yp * 3)+1] = (byte)(pixel & 0x0000ff00);
-        rgb[(yp * 3)+2] = (byte)(pixel & 0x000000ff);
-      }
-    }
-  }
-
-  /**
-   * Repeatedly take pictures
-   */
-  private void takePicture(final Context context) {
-    ((Activity)context).runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        if (camera != null) {
-          Log.v(TAG, "Start preview");
-          surfaceView.setVisibility(View.VISIBLE);
-          camera.startPreview();
-          surfaceView.setVisibility(View.INVISIBLE);
-
-          Log.v(TAG, "Take picture");
-          camera.takePicture(null, null, new Camera.PictureCallback() {
-            @Override
-            public void onPictureTaken(byte[] data, Camera camera) {
-              Log.v(TAG, "onPictureTaken");
-              if (data != null) {
-                sendPicture(data);
-              }
-              else {
-                Log.v(TAG, "onPictureTaken - data is null");
-              }
-              takePicture(context);
-            }
-          });
-        }
-      }
-    });
-  }
 
   @Override
   public void onPreviewFrame(byte[] data, Camera camera) {
@@ -201,20 +113,23 @@ class CameraExtension implements Camera.PreviewCallback {
     else {
       Log.v(TAG, "onPreviewFrame - data is null");
     }
-    /*decodeYUV420SP(previewPixels, data, previewSize.width, previewSize.height);
-    sendPicture(previewPixels);
-    surfaceView.setVisibility(View.VISIBLE);
-    camera.startPreview();
-    surfaceView.setVisibility(View.INVISIBLE);*/
   }
 
 
+  /**
+   * Get the preferred preview size. The function will return a preview size
+   * that is in the middle of the range of supported preview sizes.
+   */
   private Camera.Size getPreferredPreviewSize() {
     List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
     return previewSizes.get((int)Math.ceil(previewSizes.size() / 2));
   }
 
 
+  /**
+   * Prepare the camera for capture. This will open the camera and set the
+  * camera properties.
+   */
   private boolean prepareCapture(final Context context, int facing) {
     Log.v(TAG, "prepareCapture");
     if (!hasAllPermissions(context, PERMISSIONS)) {
@@ -268,14 +183,23 @@ class CameraExtension implements Camera.PreviewCallback {
     return true;
   }
 
+  /**
+   * Get the width of the camera image
+   */
   private int getWidth() {
     return (previewSize != null) ? previewSize.width : 0;
   }
 
+  /**
+   * Get the height of the camera image
+   */
   private int getHeight() {
     return (previewSize != null) ? previewSize.height : 0;
   }
 
+  /**
+   * Start capturing images with the camera
+   */
   private void startCapture(final Context context) {
     Log.v(TAG, "startCapture");
     ((Activity)context).runOnUiThread(new Runnable() {
@@ -307,20 +231,6 @@ class CameraExtension implements Camera.PreviewCallback {
                 surfaceView.setVisibility(View.VISIBLE);
                 camera.startPreview();
                 surfaceView.setVisibility(View.INVISIBLE);
-                /*Log.v(TAG, "Take picture");
-                camera.takePicture(null, new Camera.PictureCallback() {
-                  @Override
-                  public void onPictureTaken(byte[] data, Camera camera) {
-                    if (data != null) {
-                      Log.v(TAG, "onPictureTaken");
-                      sendPicture(data);
-                    }
-                    else {
-                      Log.v(TAG, "onPictureTaken - data is null");
-                    }
-                    surfaceView.setVisibility(View.VISIBLE);
-                  }
-                }, null);*/
               }
               catch(Exception e) {
                 Log.e(TAG, e.toString());
@@ -341,6 +251,9 @@ class CameraExtension implements Camera.PreviewCallback {
     });
   }
 
+  /**
+   * Stop capturing images with the camera
+   */
   private void stopCapture() {
     if (camera != null) {
       camera.stopPreview();
