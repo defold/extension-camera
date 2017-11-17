@@ -4,21 +4,21 @@
 
 enum CaptureQuality
 {
-	CAPTURE_QUALITY_LOW,
-	CAPTURE_QUALITY_MEDIUM,
-	CAPTURE_QUALITY_HIGH,
+    CAPTURE_QUALITY_LOW,
+    CAPTURE_QUALITY_MEDIUM,
+    CAPTURE_QUALITY_HIGH,
 };
 
 enum CameraType
 {
-	CAMERA_TYPE_FRONT, // Selfie
-	CAMERA_TYPE_BACK
+    CAMERA_TYPE_FRONT, // Selfie
+    CAMERA_TYPE_BACK
 };
 
 struct CameraInfo
 {
-	uint32_t   m_Width;
-	uint32_t   m_Height;
+    uint32_t   m_Width;
+    uint32_t   m_Height;
     CameraType m_Type;
 };
 

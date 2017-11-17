@@ -18,23 +18,23 @@
 
 @interface CameraCaptureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
-	@private AVCaptureSession* 			m_captureSession;
-	@private AVCaptureDevice*			m_camera;
-	@private AVCaptureDeviceInput* 		m_cameraInput;
-	@private AVCaptureVideoDataOutput*	m_videoOutput;
-	@public  CMVideoDimensions 			m_Size;
+    @private AVCaptureSession*          m_captureSession;
+    @private AVCaptureDevice*           m_camera;
+    @private AVCaptureDeviceInput*      m_cameraInput;
+    @private AVCaptureVideoDataOutput*  m_videoOutput;
+    @public  CMVideoDimensions          m_Size;
 }
 @end
 
 struct IOSCamera
 {
-	CameraCaptureDelegate* m_Delegate;
-	dmBuffer::HBuffer m_VideoBuffer;
-	// TODO: Support audio buffers
+    CameraCaptureDelegate* m_Delegate;
+    dmBuffer::HBuffer m_VideoBuffer;
+    // TODO: Support audio buffers
 
-	IOSCamera() : m_Delegate(0), m_VideoBuffer(0)
-	{
-	}
+    IOSCamera() : m_Delegate(0), m_VideoBuffer(0)
+    {
+    }
 };
 
 IOSCamera g_Camera;
@@ -76,31 +76,31 @@ IOSCamera g_Camera;
 {
     if( captureOutput == m_videoOutput && g_Camera.m_VideoBuffer != 0 )
     {
-	    uint8_t* data = 0;
-	    uint32_t datasize = 0;
-	    dmBuffer::GetBytes(g_Camera.m_VideoBuffer, (void**)&data, &datasize);
+        uint8_t* data = 0;
+        uint32_t datasize = 0;
+        dmBuffer::GetBytes(g_Camera.m_VideoBuffer, (void**)&data, &datasize);
 
-	    CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-	    CVPixelBufferLockBaseAddress(imageBuffer,0);
+        CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
+        CVPixelBufferLockBaseAddress(imageBuffer,0);
 
-	    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
-	    size_t width = CVPixelBufferGetWidth(imageBuffer);
-	    size_t height = CVPixelBufferGetHeight(imageBuffer);
+        size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
+        size_t width = CVPixelBufferGetWidth(imageBuffer);
+        size_t height = CVPixelBufferGetHeight(imageBuffer);
 
-	    if( width != g_Camera.m_Delegate->m_Size.width || height != g_Camera.m_Delegate->m_Size.height )
-	    {
+        if( width != g_Camera.m_Delegate->m_Size.width || height != g_Camera.m_Delegate->m_Size.height )
+        {
             //printf("img width/height: %d, %d\n", width, height);
             CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
             return;
-	    }
+        }
 
-	    uint8_t* pixels = (uint8_t*)CVPixelBufferGetBaseAddress(imageBuffer);
+        uint8_t* pixels = (uint8_t*)CVPixelBufferGetBaseAddress(imageBuffer);
 
-	    for( int y = 0; y < height; ++y )
-		{
-	    	for( int x = 0; x < width; ++x )
-	    	{
-	    		// RGB < BGR(A)
+        for( int y = 0; y < height; ++y )
+        {
+            for( int x = 0; x < width; ++x )
+            {
+                // RGB < BGR(A)
 #if defined(DM_PLATFORM_IOS)
                 // Flip Y
                 data[y*width*3 + x*3 + 2] = pixels[(height - y - 1) * bytesPerRow + x * 4 + 0];
@@ -113,12 +113,12 @@ IOSCamera g_Camera;
                 data[y*width*3 + x*3 + 0] = pixels[(height - y - 1) * bytesPerRow + bytesPerRow - (x+1) * 4 + 2];
 #endif
 
-	    	}
-		}
+            }
+        }
 
-	    CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
-	    dmBuffer::ValidateBuffer(g_Camera.m_VideoBuffer);
-	}
+        CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+        dmBuffer::ValidateBuffer(g_Camera.m_VideoBuffer);
+    }
 }
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput 
@@ -126,7 +126,7 @@ IOSCamera g_Camera;
        fromConnection:(AVCaptureConnection *)connection
 {
 
-	//NSLog(@"DROPPING FRAME!!!");
+    //NSLog(@"DROPPING FRAME!!!");
 }
 
 
@@ -354,10 +354,10 @@ static CMVideoDimensions FlipCoords(AVCaptureVideoDataOutput* output, const CMVi
 
 int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
 {
-	if(g_Camera.m_Delegate == 0)
-	{
-		g_Camera.m_Delegate	= [[CameraCaptureDelegate alloc] init];
-	}
+    if(g_Camera.m_Delegate == 0)
+    {
+        g_Camera.m_Delegate = [[CameraCaptureDelegate alloc] init];
+    }
 
     AVCaptureDevicePosition cameraposition = AVCaptureDevicePositionUnspecified;
 #if defined(DM_PLATFORM_IOS)
@@ -367,7 +367,7 @@ int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Capt
         cameraposition = AVCaptureDevicePositionFront;
 #endif
 
-	BOOL started = [g_Camera.m_Delegate startCamera: cameraposition quality: quality];
+    BOOL started = [g_Camera.m_Delegate startCamera: cameraposition quality: quality];
 
     outparams.m_Width = (uint32_t)g_Camera.m_Delegate->m_Size.width;
     outparams.m_Height = (uint32_t)g_Camera.m_Delegate->m_Size.height;
@@ -386,16 +386,16 @@ int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Capt
 
 int CameraPlatform_StopCapture()
 {
-	if(g_Camera.m_Delegate != 0)
-	{
+    if(g_Camera.m_Delegate != 0)
+    {
         [g_Camera.m_Delegate stopCamera];
         [g_Camera.m_Delegate release];
         g_Camera.m_Delegate = 0;
 
         dmBuffer::Destroy(g_Camera.m_VideoBuffer);
         g_Camera.m_VideoBuffer = 0;
-	}
-	return 1;
+    }
+    return 1;
 }
 
 #endif // DM_PLATFORM_IOS/DM_PLATFORM_OSX

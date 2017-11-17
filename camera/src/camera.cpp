@@ -38,32 +38,32 @@ static int StartCapture(lua_State* L)
     CameraType type = (CameraType) luaL_checkint(L, 1);
     CaptureQuality quality = (CaptureQuality)luaL_checkint(L, 2);
 
-	int status = CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality, g_DefoldCamera.m_Params);
+    int status = CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality, g_DefoldCamera.m_Params);
 
-	lua_pushboolean(L, status > 0);
-	if( status == 0 )
-	{
+    lua_pushboolean(L, status > 0);
+    if( status == 0 )
+    {
         dmLogError("capture failed!\n");
-		return 1;
-	}
+        return 1;
+    }
 
     // Increase ref count
     dmScript::LuaHBuffer luabuffer = {g_DefoldCamera.m_VideoBuffer, false};
     dmScript::PushBuffer(L, luabuffer);
     g_DefoldCamera.m_VideoBufferLuaRef = dmScript::Ref(L, LUA_REGISTRYINDEX);
 
-	return 1;
+    return 1;
 }
 
 static int StopCapture(lua_State* L)
 {
     DM_LUA_STACK_CHECK(L, 0);
 
-	int status = CameraPlatform_StopCapture();
-	if( !status )
-	{
+    int status = CameraPlatform_StopCapture();
+    if( !status )
+    {
         return luaL_error(L, "Failed to stop capture. Was it started?");
-	}
+    }
 
     dmScript::Unref(L, LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); // We want it destroyed by the GC
 
