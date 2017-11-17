@@ -390,6 +390,7 @@ int CameraPlatform_StopCapture()
 	{
         [g_Camera.m_Delegate stopCamera];
         [g_Camera.m_Delegate release];
+        g_Camera.m_Delegate = 0;
 
         dmBuffer::Destroy(g_Camera.m_VideoBuffer);
         g_Camera.m_VideoBuffer = 0;

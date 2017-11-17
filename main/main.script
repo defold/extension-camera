@@ -1,12 +1,20 @@
 
-function init(self)
-    local logosize = 128
-    local screen_width = sys.get_config("display.width", 600)
-    local screen_height = sys.get_config("display.height", 800)
-    local scale_width = screen_width / logosize
-    local scale_height = screen_height / logosize
+local function stop_capture(self)
+    if self.cameraframe == nil then
+        return
+    end
+
+    self.cameraframe = nil
+    camera.stop_capture()
     
-    go.set("#sprite", "scale", vmath.vector3(scale_width, scale_height, 1) )
+    label.set_text("logo#status", "Capture Status: OFF")
+end
+
+
+local function start_capture(self)
+    if self.cameraframe ~= nil then
+        return
+    end
     
     if camera ~= nil then
 
@@ -20,20 +28,37 @@ function init(self)
         end
         
         if camera.start_capture(type, quality) then
-	        self.cameraframe = camera.get_frame()
-	        self.camerainfo = camera.get_info()
-	        print("Initialized camera")
-	        pprint(self.camerainfo)    
-	        
-	        self.cameratextureheader = {width=self.camerainfo.width,
-	                                    height=self.camerainfo.height,
-	                                    type=resource.TEXTURE_TYPE_2D,
-	                                    format=resource.TEXTURE_FORMAT_RGB,
-	                                    num_mip_maps=1 }
+            self.cameraframe = camera.get_frame()
+            self.camerainfo = camera.get_info()
+            print("Initialized camera")
+            pprint(self.camerainfo)    
+            
+            self.cameratextureheader = {width=self.camerainfo.width,
+                                        height=self.camerainfo.height,
+                                        type=resource.TEXTURE_TYPE_2D,
+                                        format=resource.TEXTURE_FORMAT_RGB,
+                                        num_mip_maps=1 }
         end
+    	label.set_text("logo#status", "Capture Status: ON")
     else
         print("could not start camera capture")
+    	label.set_text("logo#status", "Capture Status: UNAVAILABLE")
     end
+end
+
+function init(self)
+    msg.post(".", "acquire_input_focus")
+
+    local logosize = 128
+    local screen_width = sys.get_config("display.width", 600)
+    local screen_height = sys.get_config("display.height", 800)
+    local scale_width = screen_width / logosize
+    local scale_height = screen_height / logosize
+    
+    go.set("#sprite", "scale", vmath.vector3(scale_width, scale_height, 1) )
+
+
+    start_capture(self)
 end
 
 function final(self)
@@ -44,10 +69,20 @@ end
 
 
 function update(self, dt)
-    if self.cameraframe then
+    if self.cameraframe ~= nil then
         local pathmodelcamera = go.get("#sprite", "texture0")
         resource.set_texture(pathmodelcamera, self.cameratextureheader, self.cameraframe)
     end
     
-    
+end
+
+
+function on_input(self, action_id, action)
+    if (action_id == hash("space") or action_id == hash("touch")) and action.pressed then
+        if self.cameraframe == nil then
+            start_capture(self)
+        else
+            stop_capture(self)
+        end
+    end
 end
