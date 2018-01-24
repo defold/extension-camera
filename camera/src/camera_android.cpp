@@ -97,9 +97,9 @@ JNIEXPORT void JNICALL Java_com_defold_android_camera_CameraExtension_handleCame
       if(Y < 0) Y += 255;
       if((i & 0x1) != 1) {
         cOff = sz + jDiv2 * w + (i >> 1) * 2;
-        Cb = yuv[cOff];
+        Cb = yuv[cOff + 1];
         if(Cb < 0) Cb += 127; else Cb -= 128;
-        Cr = yuv[cOff + 1];
+        Cr = yuv[cOff];
         if(Cr < 0) Cr += 127; else Cr -= 128;
       }
 
