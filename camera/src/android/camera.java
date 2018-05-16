@@ -42,9 +42,6 @@ class CameraExtension implements Camera.PreviewCallback {
   private Camera.Parameters parameters;
   private SurfaceView surfaceView;
 
-  private byte[] previewPixels;
-  private byte[] picturePixels;
-
   private static CameraExtension instance;
 
   private CameraExtension() {
@@ -53,7 +50,7 @@ class CameraExtension implements Camera.PreviewCallback {
 
   private static CameraExtension getInstance() {
     if (instance == null) {
-      Log.v(TAG, "No instance, creating");
+      //Log.v(TAG, "No instance, creating");
       instance = new CameraExtension();
     }
     return instance;
@@ -103,15 +100,15 @@ class CameraExtension implements Camera.PreviewCallback {
 
   @Override
   public void onPreviewFrame(byte[] data, Camera camera) {
-    Log.v(TAG, "onPreviewFrame " + previewSize.width + "x" + previewSize.height);
+    //Log.v(TAG, "onPreviewFrame " + previewSize.width + "x" + previewSize.height);
     if (data != null) {
       handleCameraFrame(data, previewSize.width, previewSize.height);
-      surfaceView.setVisibility(View.VISIBLE);
-      camera.startPreview();
-      surfaceView.setVisibility(View.INVISIBLE);
+      // surfaceView.setVisibility(View.VISIBLE);
+      // camera.startPreview();
+      // surfaceView.setVisibility(View.INVISIBLE);
     }
     else {
-      Log.v(TAG, "onPreviewFrame - data is null");
+      //Log.v(TAG, "onPreviewFrame - data is null");
     }
   }
 
@@ -131,7 +128,7 @@ class CameraExtension implements Camera.PreviewCallback {
   * camera properties.
    */
   private boolean prepareCapture(final Context context, int facing) {
-    Log.v(TAG, "prepareCapture");
+    //Log.v(TAG, "prepareCapture");
     if (!hasAllPermissions(context, PERMISSIONS)) {
       requestPermissions(context, PERMISSIONS);
       return false;
@@ -144,36 +141,33 @@ class CameraExtension implements Camera.PreviewCallback {
       camera = openFrontCamera();
     }
     if (camera == null) {
-      Log.v(TAG, "Unable to open camera");
+      //Log.v(TAG, "Unable to open camera");
       return false;
     }
 
     try {
       parameters = camera.getParameters();
-      for(Camera.Size size : parameters.getSupportedPictureSizes()) {
-        Log.v(TAG, "Supported picture size: " + size.width + "x" + size.height);
-      }
-      for(Camera.Size size : parameters.getSupportedPreviewSizes()) {
-        Log.v(TAG, "Supported preview size: " + size.width + "x" + size.height);
-      }
-      for(int format : parameters.getSupportedPictureFormats()) {
-        Log.v(TAG, "Supported picture format: " + format);
-      }
-      for(int format : parameters.getSupportedPreviewFormats()) {
-        Log.v(TAG, "Supported preview format: " + format);
-      }
-      Log.v(TAG, "Current preview format:" + parameters.getPreviewFormat());
+      // for(Camera.Size size : parameters.getSupportedPictureSizes()) {
+      //   Log.v(TAG, "Supported picture size: " + size.width + "x" + size.height);
+      // }
+      // for(Camera.Size size : parameters.getSupportedPreviewSizes()) {
+      //   Log.v(TAG, "Supported preview size: " + size.width + "x" + size.height);
+      // }
+      // for(int format : parameters.getSupportedPictureFormats()) {
+      //   Log.v(TAG, "Supported picture format: " + format);
+      // }
+      // for(int format : parameters.getSupportedPreviewFormats()) {
+      //   Log.v(TAG, "Supported preview format: " + format);
+      // }
+      // Log.v(TAG, "Current preview format:" + parameters.getPreviewFormat());
 
       pictureSize = parameters.getPictureSize();
       previewSize = getPreferredPreviewSize();
       parameters.setPreviewSize(previewSize.width, previewSize.height);
-      Log.v(TAG, "Camera parameters. picture size: " + pictureSize.width + "x" + pictureSize.height + " preview size: " + previewSize.width + "x" + previewSize.height);
+      //Log.v(TAG, "Camera parameters. picture size: " + pictureSize.width + "x" + pictureSize.height + " preview size: " + previewSize.width + "x" + previewSize.height);
       //parameters.setPictureFormat(ImageFormat.RGB_565);
       //parameters.setPictureSize(previewSize.width, previewSize.height);
       camera.setParameters(parameters);
-
-      previewPixels = new byte[previewSize.width * previewSize.height * 3];
-      picturePixels = new byte[pictureSize.width * pictureSize.height * 3];
 
       //camera.setDisplayOrientation() // use utility function from Google example
     }
@@ -201,14 +195,14 @@ class CameraExtension implements Camera.PreviewCallback {
    * Start capturing images with the camera
    */
   private void startCapture(final Context context) {
-    Log.v(TAG, "startCapture");
+    //Log.v(TAG, "startCapture");
     ((Activity)context).runOnUiThread(new Runnable() {
       @Override
       public void run() {
-        Log.v(TAG, "runOnUiThread");
+        //Log.v(TAG, "runOnUiThread");
 
         try {
-          Log.v(TAG, "Create surface");
+          //Log.v(TAG, "Create surface");
           surfaceView = new SurfaceView(context);
           Activity activity = (Activity)context;
           ViewGroup viewGroup = (ViewGroup)activity.findViewById(android.R.id.content);
@@ -218,12 +212,12 @@ class CameraExtension implements Camera.PreviewCallback {
           surfaceHolder.addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-              Log.v(TAG, "surfaceChanged");
+              //Log.v(TAG, "surfaceChanged");
             }
 
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
-              Log.v(TAG, "surfaceCreated");
+              //Log.v(TAG, "surfaceCreated");
               try {
                 camera.stopPreview();
                 camera.setPreviewCallback(CameraExtension.this);
@@ -239,7 +233,7 @@ class CameraExtension implements Camera.PreviewCallback {
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
-              Log.v(TAG, "surfaceDestroyed");
+              //Log.v(TAG, "surfaceDestroyed");
             }
           });
 
@@ -267,27 +261,27 @@ class CameraExtension implements Camera.PreviewCallback {
   }
 
   public static boolean PrepareCapture(final Context context, int facing) {
-    Log.v(TAG, "PrepareCapture " + facing);
+    //Log.v(TAG, "PrepareCapture " + facing);
     return CameraExtension.getInstance().prepareCapture(context, facing);
   }
 
   public static void StartCapture(final Context context) {
-    Log.v(TAG, "StartCapture");
+    //Log.v(TAG, "StartCapture");
     CameraExtension.getInstance().startCapture(context);
   }
 
   public static void StopCapture(final Context context) {
-    Log.v(TAG, "StopCapture");
+    //Log.v(TAG, "StopCapture");
     CameraExtension.getInstance().stopCapture();
   }
 
   public static int GetWidth() {
-    Log.v(TAG, "GetWidth");
+    //Log.v(TAG, "GetWidth");
     return CameraExtension.getInstance().getWidth();
   }
 
   public static int GetHeight() {
-    Log.v(TAG, "GetHeight");
+    //Log.v(TAG, "GetHeight");
     return CameraExtension.getInstance().getHeight();
   }
 

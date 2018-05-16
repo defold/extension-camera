@@ -117,12 +117,12 @@ JNIEXPORT void JNICALL Java_com_defold_android_camera_CameraExtension_handleCame
       B = Y + Cb + (Cb >> 1) + (Cb >> 4) + (Cb >> 5);
       if(B < 0) B = 0; else if(B > 255) B = 255;
 
-      data[0] = R;
-      data++;
-      data[0] = G;
-      data++;
-      data[0] = B;
-      data++;
+      // We get the image in landscape mode, so we flip it to portrait mode
+      int index = (w-i-1)*height*3 + (h-j-1)*3;
+      data[index + 0] = R;
+      data[index + 1] = G;
+      data[index + 2] = B;
+
       pixPtr++;
       //data[(pixPtr * 3) + 0] = R;
       //data[(pixPtr * 3) + 1] = G;
@@ -159,6 +159,14 @@ int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Capt
   jboolean prepare_success = env->CallStaticBooleanMethod(cls, prepare_capture, dmGraphics::GetNativeAndroidActivity(), facing);
   jint width = env->CallStaticIntMethod(cls, env->GetStaticMethodID(cls, "GetWidth", "()I"));
   jint height = env->CallStaticIntMethod(cls, env->GetStaticMethodID(cls, "GetHeight", "()I"));
+
+  // currently, we have portrait mode
+  if (width > height)
+  {
+    int tmp = width;
+    width = height;
+    height = tmp;
+  }
 
   // set out parameters and create video buffer
   outparams.m_Width = (uint32_t)width;
