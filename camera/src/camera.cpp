@@ -1,7 +1,3 @@
-#include <assert.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
 
 #define EXTENSION_NAME Camera
 #define LIB_NAME "Camera"
@@ -12,6 +8,10 @@
 #include <dmsdk/sdk.h>
 
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_OSX) || defined(DM_PLATFORM_ANDROID)
+#include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 
 #include "camera_private.h"
 
