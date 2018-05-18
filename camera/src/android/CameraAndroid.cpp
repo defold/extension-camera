@@ -1,3 +1,5 @@
+#if defined(DM_PLATFORM_ANDROID)
+
 #include "Camera.h"
 #include <dmsdk/sdk.h> // dmGraphics::GetNativeAndroidActivity()
 
@@ -254,3 +256,5 @@ JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_photoSaved(J
 	if(c)
 		c->PhotoSavedCB(success);
 }
+
+#endif // DM_PLATFORM_ANDROID
