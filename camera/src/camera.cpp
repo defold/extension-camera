@@ -11,7 +11,7 @@
 #define DLIB_LOG_DOMAIN LIB_NAME
 #include <dmsdk/sdk.h>
 
-#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_OSX)
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_OSX) || defined(DM_PLATFORM_ANDROID)
 
 #include "camera_private.h"
 
@@ -94,7 +94,7 @@ static int GetInfo(lua_State* L)
 static int GetFrame(lua_State* L)
 {
     DM_LUA_STACK_CHECK(L, 1);
-    lua_rawgeti(L,LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); 
+    lua_rawgeti(L,LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef);
     return 1;
 }
 
@@ -130,23 +130,29 @@ static void LuaInit(lua_State* L)
     assert(top == lua_gettop(L));
 }
 
-dmExtension::Result AppInitializeCamera(dmExtension::AppParams* params)
+static dmExtension::Result AppInitializeCamera(dmExtension::AppParams* params)
 {
     return dmExtension::RESULT_OK;
 }
 
-dmExtension::Result InitializeCamera(dmExtension::Params* params)
+static dmExtension::Result InitializeCamera(dmExtension::Params* params)
 {
     LuaInit(params->m_L);
     return dmExtension::RESULT_OK;
 }
 
-dmExtension::Result AppFinalizeCamera(dmExtension::AppParams* params)
+static dmExtension::Result UpdateCamera(dmExtension::Params* params)
+{
+    CameraPlatform_UpdateCapture();
+    return dmExtension::RESULT_OK;
+}
+
+static dmExtension::Result AppFinalizeCamera(dmExtension::AppParams* params)
 {
     return dmExtension::RESULT_OK;
 }
 
-dmExtension::Result FinalizeCamera(dmExtension::Params* params)
+static dmExtension::Result FinalizeCamera(dmExtension::Params* params)
 {
     return dmExtension::RESULT_OK;
 }
@@ -165,6 +171,11 @@ static dmExtension::Result InitializeCamera(dmExtension::Params* params)
     return dmExtension::RESULT_OK;
 }
 
+static dmExtension::Result UpdateCamera(dmExtension::Params* params)
+{
+    return dmExtension::RESULT_OK;
+}
+
 static dmExtension::Result AppFinalizeCamera(dmExtension::AppParams* params)
 {
     return dmExtension::RESULT_OK;
@@ -178,4 +189,4 @@ static dmExtension::Result FinalizeCamera(dmExtension::Params* params)
 #endif // platforms
 
 
-DM_DECLARE_EXTENSION(EXTENSION_NAME, LIB_NAME, AppInitializeCamera, AppFinalizeCamera, InitializeCamera, 0, 0, FinalizeCamera)
+DM_DECLARE_EXTENSION(EXTENSION_NAME, LIB_NAME, AppInitializeCamera, AppFinalizeCamera, InitializeCamera, UpdateCamera, 0, FinalizeCamera)

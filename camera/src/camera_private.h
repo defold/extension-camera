@@ -24,3 +24,4 @@ struct CameraInfo
 
 extern int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams);
 extern int CameraPlatform_StopCapture();
+extern int CameraPlatform_UpdateCapture();

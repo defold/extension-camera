@@ -44,7 +44,7 @@ Returns true if the capture starts well
     if camera.start_capture(camera.CAMERA_TYPE_BACK, camera.CAPTURE_QUALITY_HIGH) then
         -- do stuff
     end
-  
+
 ## camera.stop_capture()
 
 Stops a previously started capture session
@@ -56,12 +56,15 @@ Gets the info from the current capture session
     local info = camera.get_info()
     print("width", info.width)
     print("height", info.height)
-  
+
 ## camera.get_frame()
 
 Retrieves the camera pixel buffer
 This buffer has one stream named "rgb", and is of type buffer.VALUE_TYPE_UINT8 and has the value count of 1
 
     self.cameraframe = camera.get_frame()
-  
-  
+
+
+# Credits
+
+The android version was based on the code from: https://github.com/necula/native-camera

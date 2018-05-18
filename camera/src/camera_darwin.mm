@@ -121,8 +121,8 @@ IOSCamera g_Camera;
     }
 }
 
-- (void)captureOutput:(AVCaptureOutput *)captureOutput 
-  didDropSampleBuffer:(CMSampleBufferRef)sampleBuffer 
+- (void)captureOutput:(AVCaptureOutput *)captureOutput
+  didDropSampleBuffer:(CMSampleBufferRef)sampleBuffer
        fromConnection:(AVCaptureConnection *)connection
 {
 
@@ -256,7 +256,7 @@ IOSCamera g_Camera;
 
 static CMVideoDimensions FlipCoords(AVCaptureVideoDataOutput* output, const CMVideoDimensions& in)
 {
-    CMVideoDimensions out = in; 
+    CMVideoDimensions out = in;
 #if defined(DM_PLATFORM_IOS)
     AVCaptureConnection* conn = [output connectionWithMediaType:AVMediaTypeVideo];
     switch (conn.videoOrientation) {
@@ -274,7 +274,7 @@ static CMVideoDimensions FlipCoords(AVCaptureVideoDataOutput* output, const CMVi
 
 
 - ( BOOL ) startCamera: (AVCaptureDevicePosition) cameraPosition
-                  quality: (CaptureQuality)quality         
+                  quality: (CaptureQuality)quality
 {
     // 1. Find the back camera
     if ( ![ self findCamera: cameraPosition ] )
@@ -395,6 +395,11 @@ int CameraPlatform_StopCapture()
         dmBuffer::Destroy(g_Camera.m_VideoBuffer);
         g_Camera.m_VideoBuffer = 0;
     }
+    return 1;
+}
+
+int CameraPlatform_UpdateCapture()
+{
     return 1;
 }
 
