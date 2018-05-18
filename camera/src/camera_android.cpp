@@ -106,7 +106,6 @@ int CameraPlatform_StopCapture()
 int CameraPlatform_UpdateCapture()
 {
 	if (!g_Camera.m_Camera) {
-		dmLogError("Camera has not been started");
 		return 0;
 	}
 	g_Camera.m_Camera->Update();
