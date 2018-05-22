@@ -76,6 +76,7 @@ class AndroidCamera
 		params.setPictureSize(640, 480);
 		params.setPictureFormat(PixelFormat.JPEG);
 		params.setJpegQuality(90);
+		params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
 		camera.setParameters(params);
 
 		final Activity activity = (Activity)context;
