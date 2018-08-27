@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 
 #define EXTENSION_NAME Camera
 #define LIB_NAME "Camera"
@@ -13,6 +12,7 @@
 
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_OSX)
 
+#include <unistd.h>
 #include "camera_private.h"
 
 struct DefoldCamera
