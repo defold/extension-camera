@@ -26,26 +26,69 @@ struct DefoldCamera
 
     // Information about the currently set camera
     CameraInfo  m_Params;
+
+    dmArray<CameraStatus> m_MessageQueue;
+    dmScript::LuaCallbackInfo* m_Callback;
+    dmMutex::HMutex m_Mutex;
 };
 
 DefoldCamera g_DefoldCamera;
 
 
+void Camera_QueueMessage(CameraStatus status)
+{
+    DM_MUTEX_SCOPED_LOCK(g_DefoldCamera.m_Mutex);
+
+    if (g_DefoldCamera.m_MessageQueue.Full())
+    {
+        g_DefoldCamera.m_MessageQueue.OffsetCapacity(1);
+    }
+    g_DefoldCamera.m_MessageQueue.Push(status);
+}
+
+static void Camera_ProcessQueue()
+{
+    DM_MUTEX_SCOPED_LOCK(g_DefoldCamera.m_Mutex);
+
+    for (uint32_t i = 0; i != g_DefoldCamera.m_MessageQueue.Size(); ++i)
+    {
+        lua_State* L = dmScript::GetCallbackLuaContext(g_DefoldCamera.m_Callback);
+        if (!dmScript::SetupCallback(g_DefoldCamera.m_Callback))
+        {
+            break;
+        }
+        CameraStatus status = g_DefoldCamera.m_MessageQueue[i];
+        lua_pushnumber(L, (lua_Number)status);
+        int ret = lua_pcall(L, 2, 0, 0);
+        if (ret != 0)
+        {
+            lua_pop(L, 1);
+        }
+        dmScript::TeardownCallback(g_DefoldCamera.m_Callback);
+    }
+    g_DefoldCamera.m_MessageQueue.SetSize(0);
+}
+
+static void Camera_DestroyCallback()
+{
+    if (g_DefoldCamera.m_Callback != 0)
+    {
+        dmScript::DestroyCallback(g_DefoldCamera.m_Callback);
+        g_DefoldCamera.m_Callback = 0;
+    }
+}
+
 static int StartCapture(lua_State* L)
 {
-    DM_LUA_STACK_CHECK(L, 1);
+    DM_LUA_STACK_CHECK(L, 0);
 
     CameraType type = (CameraType) luaL_checkint(L, 1);
     CaptureQuality quality = (CaptureQuality)luaL_checkint(L, 2);
 
-    int status = CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality, g_DefoldCamera.m_Params);
+    Camera_DestroyCallback();
+    g_DefoldCamera.m_Callback = dmScript::CreateCallback(L, 3);
 
-    lua_pushboolean(L, status > 0);
-    if( status == 0 )
-    {
-        dmLogError("capture failed!\n");
-        return 1;
-    }
+    CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality, g_DefoldCamera.m_Params);
 
     // Increase ref count
     dmScript::LuaHBuffer luabuffer = {g_DefoldCamera.m_VideoBuffer, false};
@@ -59,14 +102,9 @@ static int StopCapture(lua_State* L)
 {
     DM_LUA_STACK_CHECK(L, 0);
 
-    int status = CameraPlatform_StopCapture();
-    if( !status )
-    {
-        return luaL_error(L, "Failed to stop capture. Was it started?");
-    }
+    CameraPlatform_StopCapture();
 
     dmScript::Unref(L, LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); // We want it destroyed by the GC
-
     return 0;
 }
 
@@ -94,7 +132,7 @@ static int GetInfo(lua_State* L)
 static int GetFrame(lua_State* L)
 {
     DM_LUA_STACK_CHECK(L, 1);
-    lua_rawgeti(L,LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); 
+    lua_rawgeti(L,LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef);
     return 1;
 }
 
@@ -113,9 +151,9 @@ static void LuaInit(lua_State* L)
     int top = lua_gettop(L);
     luaL_register(L, MODULE_NAME, Module_methods);
 
-#define SETCONSTANT(name) \
-        lua_pushnumber(L, (lua_Number) name); \
-        lua_setfield(L, -2, #name);\
+    #define SETCONSTANT(name) \
+    lua_pushnumber(L, (lua_Number) name); \
+    lua_setfield(L, -2, #name);\
 
     SETCONSTANT(CAMERA_TYPE_FRONT)
     SETCONSTANT(CAMERA_TYPE_BACK)
@@ -124,7 +162,12 @@ static void LuaInit(lua_State* L)
     SETCONSTANT(CAPTURE_QUALITY_MEDIUM)
     SETCONSTANT(CAPTURE_QUALITY_HIGH)
 
-#undef SETCONSTANT
+    SETCONSTANT(STATUS_STARTED)
+    SETCONSTANT(STATUS_STOPPED)
+    SETCONSTANT(STATUS_NOT_PERMITTED)
+    SETCONSTANT(STATUS_ERROR)
+
+    #undef SETCONSTANT
 
     lua_pop(L, 1);
     assert(top == lua_gettop(L));
@@ -132,12 +175,20 @@ static void LuaInit(lua_State* L)
 
 dmExtension::Result AppInitializeCamera(dmExtension::AppParams* params)
 {
+    dmLogInfo("Registered %s Extension", MODULE_NAME);
     return dmExtension::RESULT_OK;
 }
 
 dmExtension::Result InitializeCamera(dmExtension::Params* params)
 {
     LuaInit(params->m_L);
+    g_DefoldCamera.m_Mutex = dmMutex::New();
+    return dmExtension::RESULT_OK;
+}
+
+static dmExtension::Result UpdateCamera(dmExtension::Params* params)
+{
+    Camera_ProcessQueue();
     return dmExtension::RESULT_OK;
 }
 
@@ -148,6 +199,8 @@ dmExtension::Result AppFinalizeCamera(dmExtension::AppParams* params)
 
 dmExtension::Result FinalizeCamera(dmExtension::Params* params)
 {
+    dmMutex::Delete(g_DefoldCamera.m_Mutex);
+    Camera_DestroyCallback();
     return dmExtension::RESULT_OK;
 }
 
@@ -156,12 +209,18 @@ dmExtension::Result FinalizeCamera(dmExtension::Params* params)
 
 static dmExtension::Result AppInitializeCamera(dmExtension::AppParams* params)
 {
-    dmLogInfo("Registered %s (null) Extension\n", MODULE_NAME);
+    dmLogInfo("Registered %s (null) Extension", MODULE_NAME);
     return dmExtension::RESULT_OK;
 }
 
 static dmExtension::Result InitializeCamera(dmExtension::Params* params)
 {
+    return dmExtension::RESULT_OK;
+}
+
+static dmExtension::Result UpdateCamera(dmExtension::Params* params)
+{
+    Camera_ProcessQueue()
     return dmExtension::RESULT_OK;
 }
 
@@ -178,4 +237,4 @@ static dmExtension::Result FinalizeCamera(dmExtension::Params* params)
 #endif // platforms
 
 
-DM_DECLARE_EXTENSION(EXTENSION_NAME, LIB_NAME, AppInitializeCamera, AppFinalizeCamera, InitializeCamera, 0, 0, FinalizeCamera)
+DM_DECLARE_EXTENSION(EXTENSION_NAME, LIB_NAME, AppInitializeCamera, AppFinalizeCamera, InitializeCamera, UpdateCamera, 0, FinalizeCamera)

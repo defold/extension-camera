@@ -121,11 +121,10 @@ IOSCamera g_Camera;
     }
 }
 
-- (void)captureOutput:(AVCaptureOutput *)captureOutput 
-  didDropSampleBuffer:(CMSampleBufferRef)sampleBuffer 
+- (void)captureOutput:(AVCaptureOutput *)captureOutput
+  didDropSampleBuffer:(CMSampleBufferRef)sampleBuffer
        fromConnection:(AVCaptureConnection *)connection
 {
-
     //NSLog(@"DROPPING FRAME!!!");
 }
 
@@ -256,7 +255,7 @@ IOSCamera g_Camera;
 
 static CMVideoDimensions FlipCoords(AVCaptureVideoDataOutput* output, const CMVideoDimensions& in)
 {
-    CMVideoDimensions out = in; 
+    CMVideoDimensions out = in;
 #if defined(DM_PLATFORM_IOS)
     AVCaptureConnection* conn = [output connectionWithMediaType:AVMediaTypeVideo];
     switch (conn.videoOrientation) {
@@ -274,7 +273,7 @@ static CMVideoDimensions FlipCoords(AVCaptureVideoDataOutput* output, const CMVi
 
 
 - ( BOOL ) startCamera: (AVCaptureDevicePosition) cameraPosition
-                  quality: (CaptureQuality)quality         
+                  quality: (CaptureQuality)quality
 {
     // 1. Find the back camera
     if ( ![ self findCamera: cameraPosition ] )
@@ -352,7 +351,7 @@ static CMVideoDimensions FlipCoords(AVCaptureVideoDataOutput* output, const CMVi
 
 @end
 
-int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
+void CameraPlatform_StartCaptureAuthorized(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
 {
     if(g_Camera.m_Delegate == 0)
     {
@@ -381,10 +380,57 @@ int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Capt
 
     g_Camera.m_VideoBuffer = *buffer;
 
-    return started ? 1 : 0;
+    if (started)
+    {
+        Camera_QueueMessage(STATUS_STARTED);
+    }
+    else
+    {
+        Camera_QueueMessage(STATUS_ERROR);
+    }
 }
 
-int CameraPlatform_StopCapture()
+void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
+{
+    // Request permission to access the camera.
+    int status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+    if (status == AVAuthorizationStatusAuthorized)
+    {
+        // The user has previously granted access to the camera.
+        dmLogInfo("AVAuthorizationStatusAuthorized");
+        CameraPlatform_StartCaptureAuthorized(buffer, type, quality, outparams);
+    }
+    else if (status == AVAuthorizationStatusNotDetermined)
+    {
+        dmLogInfo("AVAuthorizationStatusNotDetermined");
+        // The app hasn't yet asked the user for camera access.
+        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
+            if (granted) {
+                dmLogInfo("AVAuthorizationStatusNotDetermined - granted!");
+                CameraPlatform_StartCaptureAuthorized(buffer, type, quality, outparams);
+            }
+            else
+            {
+                dmLogInfo("AVAuthorizationStatusNotDetermined - not granted!");
+                Camera_QueueMessage(STATUS_NOT_PERMITTED);
+            }
+        }];
+    }
+    else if (status == AVAuthorizationStatusDenied)
+    {
+        // The user has previously denied access.
+        dmLogInfo("AVAuthorizationStatusDenied");
+        Camera_QueueMessage(STATUS_NOT_PERMITTED);
+    }
+    else if (status == AVAuthorizationStatusRestricted)
+    {
+        // The user can't grant access due to restrictions.
+        dmLogInfo("AVAuthorizationStatusRestricted");
+        Camera_QueueMessage(STATUS_NOT_PERMITTED);
+    }
+}
+
+void CameraPlatform_StopCapture()
 {
     if(g_Camera.m_Delegate != 0)
     {
@@ -395,7 +441,6 @@ int CameraPlatform_StopCapture()
         dmBuffer::Destroy(g_Camera.m_VideoBuffer);
         g_Camera.m_VideoBuffer = 0;
     }
-    return 1;
 }
 
 #endif // DM_PLATFORM_IOS/DM_PLATFORM_OSX
