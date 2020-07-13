@@ -392,41 +392,49 @@ void CameraPlatform_StartCaptureAuthorized(dmBuffer::HBuffer* buffer, CameraType
 
 void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
 {
-    // Request permission to access the camera.
-    int status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
-    if (status == AVAuthorizationStatusAuthorized)
+    // Only check for permission on iOS 7+ and macOS 10.14+
+    if ([AVCaptureDevice respondsToSelector:@selector(authorizationStatusForMediaType:)])
     {
-        // The user has previously granted access to the camera.
-        dmLogInfo("AVAuthorizationStatusAuthorized");
+        // Request permission to access the camera.
+        int status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+        if (status == AVAuthorizationStatusAuthorized)
+        {
+            // The user has previously granted access to the camera.
+            dmLogInfo("AVAuthorizationStatusAuthorized");
+            CameraPlatform_StartCaptureAuthorized(buffer, type, quality, outparams);
+        }
+        else if (status == AVAuthorizationStatusNotDetermined)
+        {
+            dmLogInfo("AVAuthorizationStatusNotDetermined");
+            // The app hasn't yet asked the user for camera access.
+            [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
+                if (granted) {
+                    dmLogInfo("AVAuthorizationStatusNotDetermined - granted!");
+                    CameraPlatform_StartCaptureAuthorized(buffer, type, quality, outparams);
+                }
+                else
+                {
+                    dmLogInfo("AVAuthorizationStatusNotDetermined - not granted!");
+                    Camera_QueueMessage(STATUS_NOT_PERMITTED);
+                }
+            }];
+        }
+        else if (status == AVAuthorizationStatusDenied)
+        {
+            // The user has previously denied access.
+            dmLogInfo("AVAuthorizationStatusDenied");
+            Camera_QueueMessage(STATUS_NOT_PERMITTED);
+        }
+        else if (status == AVAuthorizationStatusRestricted)
+        {
+            // The user can't grant access due to restrictions.
+            dmLogInfo("AVAuthorizationStatusRestricted");
+            Camera_QueueMessage(STATUS_NOT_PERMITTED);
+        }
+    }
+    else
+    {
         CameraPlatform_StartCaptureAuthorized(buffer, type, quality, outparams);
-    }
-    else if (status == AVAuthorizationStatusNotDetermined)
-    {
-        dmLogInfo("AVAuthorizationStatusNotDetermined");
-        // The app hasn't yet asked the user for camera access.
-        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
-            if (granted) {
-                dmLogInfo("AVAuthorizationStatusNotDetermined - granted!");
-                CameraPlatform_StartCaptureAuthorized(buffer, type, quality, outparams);
-            }
-            else
-            {
-                dmLogInfo("AVAuthorizationStatusNotDetermined - not granted!");
-                Camera_QueueMessage(STATUS_NOT_PERMITTED);
-            }
-        }];
-    }
-    else if (status == AVAuthorizationStatusDenied)
-    {
-        // The user has previously denied access.
-        dmLogInfo("AVAuthorizationStatusDenied");
-        Camera_QueueMessage(STATUS_NOT_PERMITTED);
-    }
-    else if (status == AVAuthorizationStatusRestricted)
-    {
-        // The user can't grant access due to restrictions.
-        dmLogInfo("AVAuthorizationStatusRestricted");
-        Camera_QueueMessage(STATUS_NOT_PERMITTED);
     }
 }
 

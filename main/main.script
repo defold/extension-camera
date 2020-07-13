@@ -35,11 +35,11 @@ local function start_capture(self)
             type=resource.TEXTURE_TYPE_2D,
             format=resource.TEXTURE_FORMAT_RGB,
             num_mip_maps=1 }
+            label.set_text("logo#status", "Capture Status: ON")
         else
             label.set_text("logo#status", "Capture Status: ERROR")
         end
     end)
-    label.set_text("logo#status", "Capture Status: ON")
 end
 
 function init(self)
@@ -73,11 +73,11 @@ end
 
 
 function on_input(self, action_id, action)
-    --[[if (action_id == hash("space") or action_id == hash("touch")) and action.pressed then
+    if (action_id == hash("space") or action_id == hash("touch")) and action.pressed then
         if self.cameraframe == nil then
             start_capture(self)
         else
             stop_capture(self)
         end
-    end--]]
+    end
 end
