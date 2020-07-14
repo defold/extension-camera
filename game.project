@@ -26,8 +26,6 @@ package = com.defold.camera
 
 [osx]
 bundle_identifier = com.defold.camera
-infoplist = /Info.plist
 
 [library]
 include_dirs = camera
-
