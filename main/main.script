@@ -6,44 +6,41 @@ local function stop_capture(self)
 
     self.cameraframe = nil
     camera.stop_capture()
-    
+
     label.set_text("logo#status", "Capture Status: OFF")
 end
 
 
 local function start_capture(self)
-    if self.cameraframe ~= nil then
+    if not camera then
+        label.set_text("logo#status", "Capture Status: UNAVAILABLE")
         return
     end
-    
-    if camera ~= nil then
 
-        local sysinfo = sys.get_sys_info()
-        
-        local quality = camera.CAPTURE_QUALITY_HIGH
-        local type = camera.CAMERA_TYPE_FRONT
-        if sysinfo.system_name == 'iPhone OS' then
-            type = camera.CAMERA_TYPE_BACK
-            quality = camera.CAPTURE_QUALITY_MEDIUM
-        end
-        
-        if camera.start_capture(type, quality) then
+    local quality = camera.CAPTURE_QUALITY_HIGH
+
+    local type = camera.CAMERA_TYPE_FRONT
+    if sys.get_sys_info().system_name == 'iPhone OS' then
+        type = camera.CAMERA_TYPE_BACK
+        quality = camera.CAPTURE_QUALITY_MEDIUM
+    end
+
+    camera.start_capture(type, quality, function(self, status)
+        if status == camera.STATUS_STARTED then
             self.cameraframe = camera.get_frame()
             self.camerainfo = camera.get_info()
-            print("Initialized camera")
-            pprint(self.camerainfo)    
-            
-            self.cameratextureheader = {width=self.camerainfo.width,
-                                        height=self.camerainfo.height,
-                                        type=resource.TEXTURE_TYPE_2D,
-                                        format=resource.TEXTURE_FORMAT_RGB,
-                                        num_mip_maps=1 }
+            self.cameratextureheader = {
+                width=self.camerainfo.width,
+                height=self.camerainfo.height,
+                type=resource.TEXTURE_TYPE_2D,
+                format=resource.TEXTURE_FORMAT_RGB,
+                num_mip_maps=1
+            }
+            label.set_text("logo#status", "Capture Status: ON")
+        else
+            label.set_text("logo#status", "Capture Status: ERROR")
         end
-    	label.set_text("logo#status", "Capture Status: ON")
-    else
-        print("could not start camera capture")
-    	label.set_text("logo#status", "Capture Status: UNAVAILABLE")
-    end
+    end)
 end
 
 function init(self)
@@ -54,35 +51,33 @@ function init(self)
     local screen_height = sys.get_config("display.height", 800)
     local scale_width = screen_width / logosize
     local scale_height = screen_height / logosize
-    
-    go.set("#sprite", "scale", vmath.vector3(scale_width, scale_height, 1) )
 
+    go.set("#sprite", "scale", vmath.vector3(scale_width, scale_height, 1) )
 
     start_capture(self)
 end
 
 function final(self)
-    if self.cameraframe ~= nil then
+    if self.cameraframe then
         camera.stop_capture()
     end
 end
 
 
 function update(self, dt)
-    if self.cameraframe ~= nil then
+    if self.cameraframe then
         local pathmodelcamera = go.get("#sprite", "texture0")
         resource.set_texture(pathmodelcamera, self.cameratextureheader, self.cameraframe)
     end
-    
 end
 
 
 function on_input(self, action_id, action)
     if (action_id == hash("space") or action_id == hash("touch")) and action.pressed then
-        if self.cameraframe == nil then
-            start_capture(self)
-        else
+        if self.cameraframe then
             stop_capture(self)
+        else
+            start_capture(self)
         end
     end
 end

@@ -29,4 +29,3 @@ bundle_identifier = com.defold.camera
 
 [library]
 include_dirs = camera
-

@@ -1,67 +1,101 @@
 # extension-camera
 
-Example of interacting with the camera through native extensions.
+Native extension to use device camera to capture frames.
 
-# Disclaimer
 
-Although we aim to provide good example functionality in this example, we cannot guarantee the quality/stability at all times.
-Please regard it as just that, an example, and don't rely on this as a dependency for your production code.
+# Installation
 
-# Known issues
+To use the camera extension in a Defold project this project has to be added as a [Defold library dependency](http://www.defold.com/manuals/libraries/). Open the **game.project** file and in the [Dependencies field in the Project section](https://defold.com/manuals/project-settings/#dependencies) add:
+
+https://github.com/defold/extension-camera/archive/master.zip
+
+Or point to the ZIP file of [a specific release](https://github.com/defold/extension-camera/releases).
+
+
+# Supported platforms
 
 The currently supported platforms are: OSX + iOS
 
 
 # FAQ
 
-## How do I use this extension?
+## How do I reset macOS camera permission?
 
-Add the package link (https://github.com/defold/extension-camera/archive/master.zip)
-to the project setting `project.dependencies`, and you should be good to go.
+To test macOS camera permission popup multiple times you can reset the permission from the terminal:
 
-See the [manual](http://www.defold.com/manuals/libraries/) for further info.
+```bash
+tccutil reset Camera
+```
 
 
 # Lua API
 
 ## Type constants
 
-Describes what camera should be used
+Describes what camera should be used.
 
-    camera.CAMERA_TYPE_FRONT -- Selfie
-    camera.CAMERA_TYPE_BACK
+```lua
+camera.CAMERA_TYPE_FRONT -- Selfie
+camera.CAMERA_TYPE_BACK
+```
+
 
 ## Quality constants
 
-    camera.CAPTURE_QUALITY_HIGH
-    camera.CAPTURE_QUALITY_MEDIUM
-    camera.CAPTURE_QUALITY_LOW
+```lua
+camera.CAPTURE_QUALITY_HIGH
+camera.CAPTURE_QUALITY_MEDIUM
+camera.CAPTURE_QUALITY_LOW
+```
 
-## camera.start_capture(type, quality)
 
-Returns true if the capture starts well
+## Status constants
 
-    if camera.start_capture(camera.CAMERA_TYPE_BACK, camera.CAPTURE_QUALITY_HIGH) then
+```lua
+camera.STATUS_STARTED
+camera.STATUS_STOPPED
+camera.STATUS_NOT_PERMITTED
+camera.STATUS_ERROR
+```
+
+
+## camera.start_capture(type, quality, callback)
+
+Start camera capture using the specified camera (front/back) and capture quality. This may trigger a camera usage permission popup. When the popup has been dismissed the callback will be invoked with camera start status.
+
+```lua
+camera.start_capture(camera.CAMERA_TYPE_BACK, camera.CAPTURE_QUALITY_HIGH, function(self, status)
+    if status == camera.STATUS_STARTED then
         -- do stuff
     end
-  
+end)
+```
+
+
 ## camera.stop_capture()
 
-Stops a previously started capture session
+Stops a previously started capture session.
+
+```lua
+camera.stop_capture()
+```
+
 
 ## camera.get_info()
 
-Gets the info from the current capture session
+Gets the info from the current capture session.
 
-    local info = camera.get_info()
-    print("width", info.width)
-    print("height", info.height)
-  
+```lua
+local info = camera.get_info()
+print("width", info.width)
+print("height", info.height)
+```
+
+
 ## camera.get_frame()
 
-Retrieves the camera pixel buffer
-This buffer has one stream named "rgb", and is of type buffer.VALUE_TYPE_UINT8 and has the value count of 1
+Retrieves the camera pixel buffer. This buffer has one stream named "rgb", and is of type `buffer.VALUE_TYPE_UINT8` and has the value count of 1.
 
-    self.cameraframe = camera.get_frame()
-  
-  
+```lua
+self.cameraframe = camera.get_frame()
+```

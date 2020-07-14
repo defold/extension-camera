@@ -22,5 +22,15 @@ struct CameraInfo
     CameraType m_Type;
 };
 
-extern int CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams);
-extern int CameraPlatform_StopCapture();
+enum CameraStatus
+{
+    STATUS_STARTED,
+    STATUS_STOPPED,
+    STATUS_NOT_PERMITTED,
+    STATUS_ERROR
+};
+
+extern void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams);
+extern void CameraPlatform_StopCapture();
+
+void Camera_QueueMessage(CameraStatus message);
