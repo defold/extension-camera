@@ -37,9 +37,7 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSCameraUsageDescription</key>
-	<string>App Needs to use camera to take Profile picture</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>App Needs to store your photos</string>
+	<string>{{project.title}} needs to use the camera</string>
 	{{#display.high_dpi}}
 	<key>NSHighResolutionCapable</key>
 		<true/>

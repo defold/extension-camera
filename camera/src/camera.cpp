@@ -34,7 +34,6 @@ struct DefoldCamera
 
 DefoldCamera g_DefoldCamera;
 
-
 void Camera_QueueMessage(CameraStatus status)
 {
     DM_MUTEX_SCOPED_LOCK(g_DefoldCamera.m_Mutex);
@@ -58,6 +57,20 @@ static void Camera_ProcessQueue()
             break;
         }
         CameraStatus status = g_DefoldCamera.m_MessageQueue[i];
+
+        if (status == STATUS_STARTED)
+        {
+            // Increase ref count
+            dmScript::LuaHBuffer luabuffer = {g_DefoldCamera.m_VideoBuffer, false};
+            dmScript::PushBuffer(L, luabuffer);
+            g_DefoldCamera.m_VideoBufferLuaRef = dmScript::Ref(L, LUA_REGISTRYINDEX);
+        }
+        else if (status == STATUS_STOPPED)
+        {
+            dmScript::Unref(L, LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); // We want it destroyed by the GC
+            g_DefoldCamera.m_VideoBufferLuaRef = 0;
+        }
+
         lua_pushnumber(L, (lua_Number)status);
         int ret = lua_pcall(L, 2, 0, 0);
         if (ret != 0)
@@ -90,11 +103,6 @@ static int StartCapture(lua_State* L)
 
     CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality, g_DefoldCamera.m_Params);
 
-    // Increase ref count
-    dmScript::LuaHBuffer luabuffer = {g_DefoldCamera.m_VideoBuffer, false};
-    dmScript::PushBuffer(L, luabuffer);
-    g_DefoldCamera.m_VideoBufferLuaRef = dmScript::Ref(L, LUA_REGISTRYINDEX);
-
     return 1;
 }
 
@@ -104,7 +112,6 @@ static int StopCapture(lua_State* L)
 
     CameraPlatform_StopCapture();
 
-    dmScript::Unref(L, LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); // We want it destroyed by the GC
     return 0;
 }
 
@@ -132,7 +139,14 @@ static int GetInfo(lua_State* L)
 static int GetFrame(lua_State* L)
 {
     DM_LUA_STACK_CHECK(L, 1);
-    lua_rawgeti(L,LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef);
+    if (g_DefoldCamera.m_VideoBufferLuaRef != 0)
+    {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef);
+    }
+    else
+    {
+        lua_pushnil(L);
+    }
     return 1;
 }
 
