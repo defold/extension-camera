@@ -351,6 +351,11 @@ static CMVideoDimensions FlipCoords(AVCaptureVideoDataOutput* output, const CMVi
 
 @end
 
+int CameraPlatform_Initialize()
+{
+    return 1;
+}
+
 void CameraPlatform_StartCaptureAuthorized(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
 {
     if(g_Camera.m_Delegate == 0)
@@ -382,11 +387,11 @@ void CameraPlatform_StartCaptureAuthorized(dmBuffer::HBuffer* buffer, CameraType
 
     if (started)
     {
-        Camera_QueueMessage(STATUS_STARTED);
+        Camera_QueueMessage(CAMERA_STARTED);
     }
     else
     {
-        Camera_QueueMessage(STATUS_ERROR);
+        Camera_QueueMessage(CAMERA_ERROR);
     }
 }
 
@@ -415,7 +420,7 @@ void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Cap
                 else
                 {
                     dmLogInfo("AVAuthorizationStatusNotDetermined - not granted!");
-                    Camera_QueueMessage(STATUS_NOT_PERMITTED);
+                    Camera_QueueMessage(CAMERA_NOT_PERMITTED);
                 }
             }];
         }
@@ -423,13 +428,13 @@ void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Cap
         {
             // The user has previously denied access.
             dmLogInfo("AVAuthorizationStatusDenied");
-            Camera_QueueMessage(STATUS_NOT_PERMITTED);
+            Camera_QueueMessage(CAMERA_NOT_PERMITTED);
         }
         else if (status == AVAuthorizationStatusRestricted)
         {
             // The user can't grant access due to restrictions.
             dmLogInfo("AVAuthorizationStatusRestricted");
-            Camera_QueueMessage(STATUS_NOT_PERMITTED);
+            Camera_QueueMessage(CAMERA_NOT_PERMITTED);
         }
     }
     else
@@ -450,5 +455,7 @@ void CameraPlatform_StopCapture()
         g_Camera.m_VideoBuffer = 0;
     }
 }
+
+void CameraPlatform_UpdateCapture() {}
 
 #endif // DM_PLATFORM_IOS/DM_PLATFORM_OSX

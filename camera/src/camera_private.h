@@ -22,15 +22,18 @@ struct CameraInfo
     CameraType m_Type;
 };
 
-enum CameraStatus
+enum CameraMessage
 {
-    STATUS_STARTED,
-    STATUS_STOPPED,
-    STATUS_NOT_PERMITTED,
-    STATUS_ERROR
+    CAMERA_STARTED,
+    CAMERA_STOPPED,
+    CAMERA_NOT_PERMITTED,
+    CAMERA_ERROR,
+    CAMERA_SHOW_PERMISSION_RATIONALE
 };
 
+extern int CameraPlatform_Initialize();
 extern void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams);
+extern void CameraPlatform_UpdateCapture();
 extern void CameraPlatform_StopCapture();
 
-void Camera_QueueMessage(CameraStatus message);
+void Camera_QueueMessage(CameraMessage message);
