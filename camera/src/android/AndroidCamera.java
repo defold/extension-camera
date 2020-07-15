@@ -22,42 +22,16 @@ import android.view.Surface;
 
 import java.io.IOException;
 
-class AndroidCamera
+public class AndroidCamera extends Fragment
 {
 	private static final String TAG = AndroidCamera.class.getSimpleName();
-	private static final String PERMISSION_FRAGMENT_TAG = PermissionsFragment.class.getSimpleName();
-
-	public static class PermissionsFragment extends Fragment {
-		private AndroidCamera camera;
-
-		public PermissionsFragment(final Activity activity, final AndroidCamera camera) {
-			this.camera = camera;
-			final FragmentManager fragmentManager = activity.getFragmentManager();
-			if (fragmentManager.findFragmentByTag(PERMISSION_FRAGMENT_TAG) == null) {
-				fragmentManager.beginTransaction().add(this, PERMISSION_FRAGMENT_TAG).commit();
-			}
-		}
-
-		@Override
-		public void onCreate(Bundle savedInstanceState) {
-			super.onCreate(savedInstanceState);
-			setRetainInstance(true);
-		}
-
-		@Override
-		public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-			Log.d(TAG, "onRequestPermissionsResult " + requestCode + " " + permissions[0] + " " + grantResults[0]);
-			camera.onRequestPermissionsResult(grantResults[0]);
-		}
-	}
 
 	enum CameraMessage
 	{
 		CAMERA_STARTED(0),
 		CAMERA_STOPPED(1),
 		CAMERA_NOT_PERMITTED(2),
-		CAMERA_ERROR(3),
-		CAMERA_SHOW_PERMISSION_RATIONALE(4);
+		CAMERA_ERROR(3);
 
 		private final int value;
 
@@ -70,7 +44,6 @@ class AndroidCamera
 		}
 	}
 
-	private PermissionsFragment permissionFragment;
 	private Camera camera;
 	private SurfaceTexture surface;
 	private boolean newFrame;
@@ -89,39 +62,46 @@ class AndroidCamera
 	private AndroidCamera(final Context context)
 	{
 		this.context = context;
-		permissionFragment = new PermissionsFragment((Activity)context, this);
-	}
 
-	private void requestPermission() {
-		Log.d(TAG, "requestPermission");
-		final Activity activity = (Activity)context;
-		if (Build.VERSION.SDK_INT < 23)
-		{
-			Log.d(TAG, "requestPermission SDK_INT < 23");
-			final int grantResult = ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA);
-			onRequestPermissionsResult(grantResult);
-		}
-		else
-		{
-			Log.d(TAG, "requestPermission fragment");
-			final FragmentManager fragmentManager = activity.getFragmentManager();
-			final Fragment fragment = fragmentManager.findFragmentByTag(PERMISSION_FRAGMENT_TAG);
-			final String[] permissions = new String[] { Manifest.permission.CAMERA };
-			fragment.requestPermissions(permissions, 100);
+		final FragmentManager fragmentManager = ((Activity)context).getFragmentManager();
+		if (fragmentManager.findFragmentByTag(TAG) == null) {
+			fragmentManager.beginTransaction().add(this, TAG).commit();
 		}
 	}
 
-	public synchronized void onRequestPermissionsResult(int grantResult) {
-		Log.d(TAG, "onRequestPermissionsResult " + grantResult);
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setRetainInstance(true);
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+		int grantResult = grantResults[0];
 		if (grantResult == PackageManager.PERMISSION_GRANTED)
 		{
-			Log.d(TAG, "onRequestPermissionsResult startPreviewAuthorized");
 			startPreviewAuthorized();
 		}
 		else
 		{
-			Log.d(TAG, "onRequestPermissionsResult ERROR");
 			queueMessage(CameraMessage.CAMERA_ERROR.getValue());
+		}
+	}
+
+	private void requestPermission() {
+		final Activity activity = (Activity)context;
+		if (Build.VERSION.SDK_INT < 23)
+		{
+			final int grantResult = ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA);
+			// onRequestPermissionsResult(grantResult);
+			onRequestPermissionsResult(0, new String[] { Manifest.permission.CAMERA }, new int[] { grantResult });
+		}
+		else
+		{
+			final FragmentManager fragmentManager = activity.getFragmentManager();
+			final Fragment fragment = fragmentManager.findFragmentByTag(TAG);
+			final String[] permissions = new String[] { Manifest.permission.CAMERA };
+			fragment.requestPermissions(permissions, 100);
 		}
 	}
 
@@ -182,14 +162,13 @@ class AndroidCamera
 		catch(IOException ioe)
 		{
 		}
-		Log.d(TAG, "startPreviewAuthorized starting camera");
+
 		camera.startPreview();
 		queueMessage(CameraMessage.CAMERA_STARTED.getValue());
 	}
 
 	public void startPreview()
 	{
-		Log.d(TAG, "startPreview");
 		if(camera != null)
 		{
 			queueMessage(CameraMessage.CAMERA_STARTED.getValue());

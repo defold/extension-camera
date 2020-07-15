@@ -27,8 +27,7 @@ enum CameraMessage
     CAMERA_STARTED,
     CAMERA_STOPPED,
     CAMERA_NOT_PERMITTED,
-    CAMERA_ERROR,
-    CAMERA_SHOW_PERMISSION_RATIONALE
+    CAMERA_ERROR
 };
 
 extern int CameraPlatform_Initialize();

@@ -61,7 +61,6 @@ static void Camera_ProcessQueue()
 
         if (message == CAMERA_STARTED)
         {
-            dmLogInfo("Camera_ProcessQueue CAMERA_STARTED");
             // Increase ref count
             dmScript::LuaHBuffer luabuffer = {g_DefoldCamera.m_VideoBuffer, false};
             dmScript::PushBuffer(L, luabuffer);
@@ -69,13 +68,8 @@ static void Camera_ProcessQueue()
         }
         else if (message == CAMERA_STOPPED)
         {
-            dmLogInfo("Camera_ProcessQueue CAMERA_STOPPED");
             dmScript::Unref(L, LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); // We want it destroyed by the GC
             g_DefoldCamera.m_VideoBufferLuaRef = 0;
-        }
-        else
-        {
-            dmLogInfo("Camera_ProcessQueue SOMETHING ELSE");
         }
 
         lua_pushnumber(L, (lua_Number)message);

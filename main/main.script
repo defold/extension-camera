@@ -26,8 +26,6 @@ local function start_capture(self)
     end
 
     camera.start_capture(type, quality, function(self, status)
-        print("camera.start_capture", status)
-        pprint(camera)
         if status == camera.CAMERA_STARTED then
             self.cameraframe = camera.get_frame()
             self.camerainfo = camera.get_info()
@@ -39,7 +37,9 @@ local function start_capture(self)
                 num_mip_maps=1
             }
             label.set_text("logo#status", "Capture Status: ON")
-        else
+        elseif status == camera.CAMERA_STOPPED then
+            label.set_text("logo#status", "Capture Status: OFF")
+        elseif status == camera.CAMERA_ERROR then
             label.set_text("logo#status", "Capture Status: ERROR")
         end
     end)
