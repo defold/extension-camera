@@ -30,6 +30,8 @@ struct IOSCamera
 {
     CameraCaptureDelegate* m_Delegate;
     dmBuffer::HBuffer m_VideoBuffer;
+    uint32_t m_Width;
+    uint32_t m_Height;
     // TODO: Support audio buffers
 
     IOSCamera() : m_Delegate(0), m_VideoBuffer(0)
@@ -351,12 +353,18 @@ static CMVideoDimensions FlipCoords(AVCaptureVideoDataOutput* output, const CMVi
 
 @end
 
-int CameraPlatform_Initialize()
+void CameraPlatform_GetCameraInfo(CameraInfo& outparams)
+{
+    outparams.m_Width = g_Camera.m_Width;
+    outparams.m_Height = g_Camera.m_Height;
+}
+
+int CameraPlatform_Initialize(uint32_t width, uint32_t height)
 {
     return 1;
 }
 
-void CameraPlatform_StartCaptureAuthorized(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
+void CameraPlatform_StartCaptureAuthorized(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality)
 {
     if(g_Camera.m_Delegate == 0)
     {
@@ -373,10 +381,10 @@ void CameraPlatform_StartCaptureAuthorized(dmBuffer::HBuffer* buffer, CameraType
 
     BOOL started = [g_Camera.m_Delegate startCamera: cameraposition quality: quality];
 
-    outparams.m_Width = (uint32_t)g_Camera.m_Delegate->m_Size.width;
-    outparams.m_Height = (uint32_t)g_Camera.m_Delegate->m_Size.height;
+    g_Camera.m_Width = (uint32_t)g_Camera.m_Delegate->m_Size.width;
+    g_Camera.m_Height = (uint32_t)g_Camera.m_Delegate->m_Size.height;
 
-    uint32_t size = outparams.m_Width * outparams.m_Height;
+    uint32_t size = g_Camera.m_Width * g_Camera.m_Height;
     dmBuffer::StreamDeclaration streams_decl[] = {
         {dmHashString64("rgb"), dmBuffer::VALUE_TYPE_UINT8, 3}
     };
@@ -395,7 +403,7 @@ void CameraPlatform_StartCaptureAuthorized(dmBuffer::HBuffer* buffer, CameraType
     }
 }
 
-void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
+void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality)
 {
     // Only check for permission on iOS 7+ and macOS 10.14+
     if ([AVCaptureDevice respondsToSelector:@selector(authorizationStatusForMediaType:)])
@@ -406,7 +414,7 @@ void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Cap
         {
             // The user has previously granted access to the camera.
             dmLogInfo("AVAuthorizationStatusAuthorized");
-            CameraPlatform_StartCaptureAuthorized(buffer, type, quality, outparams);
+            CameraPlatform_StartCaptureAuthorized(buffer, type, quality);
         }
         else if (status == AVAuthorizationStatusNotDetermined)
         {
@@ -415,7 +423,7 @@ void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Cap
             [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
                 if (granted) {
                     dmLogInfo("AVAuthorizationStatusNotDetermined - granted!");
-                    CameraPlatform_StartCaptureAuthorized(buffer, type, quality, outparams);
+                    CameraPlatform_StartCaptureAuthorized(buffer, type, quality);
                 }
                 else
                 {
@@ -439,7 +447,7 @@ void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Cap
     }
     else
     {
-        CameraPlatform_StartCaptureAuthorized(buffer, type, quality, outparams);
+        CameraPlatform_StartCaptureAuthorized(buffer, type, quality);
     }
 }
 

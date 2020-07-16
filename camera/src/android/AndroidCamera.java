@@ -20,38 +20,38 @@ import android.graphics.SurfaceTexture; // API 11
 
 import android.view.Surface;
 
+import java.util.List;
+
 import java.io.IOException;
 
 public class AndroidCamera extends Fragment
 {
 	private static final String TAG = AndroidCamera.class.getSimpleName();
 
-	enum CameraMessage
-	{
-		CAMERA_STARTED(0),
-		CAMERA_STOPPED(1),
-		CAMERA_NOT_PERMITTED(2),
-		CAMERA_ERROR(3);
+	private static final int CAMERA_STARTED = 0;
+	private static final int CAMERA_STOPPED = 1;
+	private static final int CAMERA_NOT_PERMITTED = 2;
+	private static final int CAMERA_ERROR = 3;
 
-		private final int value;
+	private static final int CAPTURE_QUALITY_LOW = 0;
+	private static final int CAPTURE_QUALITY_MEDIUM = 1;
+	private static final int CAPTURE_QUALITY_HIGH = 2;
 
-		private CameraMessage(int value) {
-			this.value = value;
-		}
-
-		public int getValue() {
-			return value;
-		}
-	}
+	private static final int CAMERA_TYPE_FRONT = 0;
+	private static final int CAMERA_TYPE_BACK = 1;
 
 	private Camera camera;
 	private SurfaceTexture surface;
 	private boolean newFrame;
+	private int position;
+	private int quality;
+	private Camera.Size size;
 
 	private static Context context;
 
 	static native void frameUpdate(int[] data);
 	static native void queueMessage(int message);
+	static native void captureStarted(int width, int height);
 
 
 	public static AndroidCamera getCamera(Context context)
@@ -84,7 +84,7 @@ public class AndroidCamera extends Fragment
 		}
 		else
 		{
-			queueMessage(CameraMessage.CAMERA_ERROR.getValue());
+			queueMessage(CAMERA_ERROR);
 		}
 	}
 
@@ -123,7 +123,7 @@ public class AndroidCamera extends Fragment
 
 		if(cameraId == -1)
 		{
-			queueMessage(CameraMessage.CAMERA_ERROR.getValue());
+			queueMessage(CAMERA_ERROR);
 			return;
 		}
 
@@ -131,8 +131,24 @@ public class AndroidCamera extends Fragment
 		camera = Camera.open(cameraId);
 
 		Camera.Parameters params = camera.getParameters();
-		params.setPreviewSize(640, 480);
-		params.setPictureSize(640, 480);
+
+		List<Camera.Size> sizes = params.getSupportedPreviewSizes();
+		switch(this.quality)
+		{
+			case CAPTURE_QUALITY_HIGH:
+				this.size = sizes.get(sizes.size() - 1);
+				break;
+			case CAPTURE_QUALITY_LOW:
+				this.size = sizes.get(0);
+				break;
+			case CAPTURE_QUALITY_MEDIUM:
+			default:
+				this.size = sizes.get((int)Math.ceil(sizes.size() / 2));
+				break;
+		}
+
+		params.setPreviewSize(this.size.width, this.size.height);
+		params.setPictureSize(this.size.width, this.size.height);
 		params.setPictureFormat(PixelFormat.JPEG);
 		params.setJpegQuality(90);
 		params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
@@ -150,7 +166,7 @@ public class AndroidCamera extends Fragment
 				if(rotation == Surface.ROTATION_180 || rotation == Surface.ROTATION_270)
 				flip = true;
 
-				int[] pixels = convertYUV420_NV21toARGB8888(data, 640, 480, flip);
+				int[] pixels = convertYUV420_NV21toARGB8888(data, AndroidCamera.this.size.width, AndroidCamera.this.size.height, flip);
 				frameUpdate(pixels);
 			}
 		});
@@ -163,18 +179,21 @@ public class AndroidCamera extends Fragment
 		{
 		}
 
+		captureStarted(this.size.width, this.size.height);
 		camera.startPreview();
-		queueMessage(CameraMessage.CAMERA_STARTED.getValue());
+		queueMessage(CAMERA_STARTED);
 	}
 
-	public void startPreview()
+	public void startPreview(int position, int quality)
 	{
 		if(camera != null)
 		{
-			queueMessage(CameraMessage.CAMERA_STARTED.getValue());
+			queueMessage(CAMERA_STARTED);
 			return;
 		}
 
+		this.position = position;
+		this.quality = quality;
 		requestPermission();
 	}
 
@@ -185,7 +204,7 @@ public class AndroidCamera extends Fragment
 			camera.stopPreview();
 			camera.release();
 			camera = null;
-			queueMessage(CameraMessage.CAMERA_STOPPED.getValue());
+			queueMessage(CAMERA_STOPPED);
 		}
 	}
 

@@ -102,7 +102,7 @@ static int StartCapture(lua_State* L)
     Camera_DestroyCallback();
     g_DefoldCamera.m_Callback = dmScript::CreateCallback(L, 3);
 
-    CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality, g_DefoldCamera.m_Params);
+    CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality);
 
     return 1;
 }
@@ -120,6 +120,7 @@ static int GetInfo(lua_State* L)
 {
     DM_LUA_STACK_CHECK(L, 1);
 
+    CameraPlatform_GetCameraInfo(g_DefoldCamera.m_Params);
     lua_newtable(L);
     lua_pushstring(L, "width");
     lua_pushnumber(L, g_DefoldCamera.m_Params.m_Width);

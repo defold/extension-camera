@@ -31,8 +31,9 @@ enum CameraMessage
 };
 
 extern int CameraPlatform_Initialize();
-extern void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams);
+extern void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality);
 extern void CameraPlatform_UpdateCapture();
 extern void CameraPlatform_StopCapture();
+extern void CameraPlatform_GetCameraInfo(CameraInfo& outparams);
 
 void Camera_QueueMessage(CameraMessage message);

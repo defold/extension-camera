@@ -4,18 +4,21 @@
 
 #include "camera_private.h"
 
-static const uint32_t CAMERA_WIDTH = 640;
-static const uint32_t CAMERA_HEIGHT = 480;
+static jclass		g_CameraClass = 0;
+static jobject		g_CameraObject = 0;
+static jmethodID	g_GetCameraMethodId = 0;
+static jmethodID	g_StartPreviewMethodId = 0;
+static jmethodID	g_StopPreviewMethodId = 0;
 
-static jclass		g_cameraClass = 0;
-static jobject		g_cameraObject = 0;
-static jmethodID	g_getCameraMethodId = 0;
-static jmethodID	g_startPreviewMethodId = 0;
-static jmethodID	g_stopPreviewMethodId = 0;
+static jint *g_Data = 0;
+static bool g_FrameLock = false;
 
-static jint g_data[CAMERA_WIDTH * CAMERA_HEIGHT];
-static bool g_frameLock = false;
+static uint32_t g_Width = 0;
+static uint32_t g_Height = 0;
+static CameraType g_Type;
+static CaptureQuality g_Quality;
 
+static dmBuffer::HBuffer* g_Buffer = 0;
 static dmBuffer::HBuffer g_VideoBuffer = 0;
 
 
@@ -55,14 +58,15 @@ extern "C"
 {
 	JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_frameUpdate(JNIEnv * env, jobject jobj, jintArray data);
     JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_queueMessage(JNIEnv * env, jobject jobj, jint message);
+    JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_captureStarted(JNIEnv * env, jobject jobj, jint width, jint height);
 }
 
 JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_frameUpdate(JNIEnv * env, jobject jobj, jintArray data)
 {
-	if(!g_frameLock)
+	if(!g_FrameLock)
 	{
-		env->GetIntArrayRegion(data, 0, CAMERA_WIDTH*CAMERA_HEIGHT, g_data);
-		g_frameLock = true;
+		env->GetIntArrayRegion(data, 0, g_Width * g_Height, g_Data);
+		g_FrameLock = true;
 	}
 }
 
@@ -71,6 +75,39 @@ JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_queueMessage
     Camera_QueueMessage((CameraMessage)message);
 }
 
+JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_captureStarted(JNIEnv * env, jobject jobj, jint width, jint height)
+{
+    // As default behavior, we want portrait mode
+    if (width > height) {
+        uint32_t tmp = width;
+        width = height;
+        height = tmp;
+    }
+
+    g_Width = (uint32_t)width;
+    g_Height = (uint32_t)height;
+
+    if (g_Data)
+    {
+        delete g_Data;
+    }
+    uint32_t size = g_Width * g_Height;
+    g_Data = new jint[size];
+    dmBuffer::StreamDeclaration streams_decl[] = {
+        {dmHashString64("rgb"), dmBuffer::VALUE_TYPE_UINT8, 3}
+    };
+    dmBuffer::Create(size, streams_decl, 1, g_Buffer);
+
+    g_VideoBuffer = *g_Buffer;
+}
+
+
+void CameraPlatform_GetCameraInfo(CameraInfo& outparams)
+{
+    outparams.m_Width = g_Width;
+    outparams.m_Height = g_Height;
+    outparams.m_Type = g_Type;
+}
 
 int CameraPlatform_Initialize()
 {
@@ -82,8 +119,8 @@ int CameraPlatform_Initialize()
 
     // get the AndroidCamera class
     jclass tmp = GetClass(env, "com.defold.android.camera/AndroidCamera");
-    g_cameraClass = (jclass)env->NewGlobalRef(tmp);
-    if(!g_cameraClass)
+    g_CameraClass = (jclass)env->NewGlobalRef(tmp);
+    if(!g_CameraClass)
     {
         dmLogError("Could not find class 'com.defold.android.camera/AndroidCamera'.");
         Detach(env);
@@ -91,17 +128,17 @@ int CameraPlatform_Initialize()
     }
 
     // get an instance of the AndroidCamera class using the getCamera() method
-    g_getCameraMethodId = env->GetStaticMethodID(g_cameraClass, "getCamera", "(Landroid/content/Context;)Lcom/defold/android/camera/AndroidCamera;");
-    if(!g_getCameraMethodId)
+    g_GetCameraMethodId = env->GetStaticMethodID(g_CameraClass, "getCamera", "(Landroid/content/Context;)Lcom/defold/android/camera/AndroidCamera;");
+    if(!g_GetCameraMethodId)
     {
         dmLogError("Could not get static method 'getCamera'.");
         Detach(env);
         return false;
     }
 
-    jobject tmp1 = env->CallStaticObjectMethod(g_cameraClass, g_getCameraMethodId, dmGraphics::GetNativeAndroidActivity());
-    g_cameraObject = (jobject)env->NewGlobalRef(tmp1);
-    if(!g_cameraObject)
+    jobject tmp1 = env->CallStaticObjectMethod(g_CameraClass, g_GetCameraMethodId, dmGraphics::GetNativeAndroidActivity());
+    g_CameraObject = (jobject)env->NewGlobalRef(tmp1);
+    if(!g_CameraObject)
     {
         dmLogError("Could not create instance.");
         Detach(env);
@@ -109,15 +146,15 @@ int CameraPlatform_Initialize()
     }
 
     // get reference to startPreview() and stopPreview() methods
-    g_startPreviewMethodId = env->GetMethodID(g_cameraClass, "startPreview", "()V");
-    if(!g_startPreviewMethodId)
+    g_StartPreviewMethodId = env->GetMethodID(g_CameraClass, "startPreview", "(II)V");
+    if(!g_StartPreviewMethodId)
     {
         dmLogError("Could not get startPreview() method.");
         Detach(env);
         return false;
     }
-    g_stopPreviewMethodId = env->GetMethodID(g_cameraClass, "stopPreview", "()V");
-    if(!g_stopPreviewMethodId)
+    g_StopPreviewMethodId = env->GetMethodID(g_CameraClass, "stopPreview", "()V");
+    if(!g_StopPreviewMethodId)
     {
         dmLogError("Could not get stopPreview() method.");
         Detach(env);
@@ -128,62 +165,49 @@ int CameraPlatform_Initialize()
     return true;
 }
 
-void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality, CameraInfo& outparams)
+void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, CaptureQuality quality)
 {
-    if (!g_cameraObject)
+    if (!g_CameraObject)
     {
         Camera_QueueMessage(CAMERA_ERROR);
         return;
     }
 
-    outparams.m_Width = (uint32_t)CAMERA_WIDTH;
-    outparams.m_Height = (uint32_t)CAMERA_HEIGHT;
-
-    // As default behavior, we want portrait mode
-    if (outparams.m_Width > outparams.m_Height) {
-        uint32_t tmp = outparams.m_Width;
-        outparams.m_Width = outparams.m_Height;
-        outparams.m_Height = tmp;
-    }
-
-    uint32_t size = outparams.m_Width * outparams.m_Height;
-    dmBuffer::StreamDeclaration streams_decl[] = {
-        {dmHashString64("rgb"), dmBuffer::VALUE_TYPE_UINT8, 3}
-    };
-    dmBuffer::Create(size, streams_decl, 1, buffer);
-
-    g_VideoBuffer = *buffer;
+    g_Buffer = buffer;
+    g_Type = type;
+    g_Quality = quality;
 
     JNIEnv* env = Attach();
-	env->CallVoidMethod(g_cameraObject, g_startPreviewMethodId);
+	env->CallVoidMethod(g_CameraObject, g_StartPreviewMethodId);
 	Detach(env);
 }
 
 void CameraPlatform_StopCapture()
 {
-    if (!g_cameraObject)
+    if (!g_CameraObject)
     {
         Camera_QueueMessage(CAMERA_ERROR);
         return;
     }
 
     JNIEnv* env = Attach();
-    env->CallVoidMethod(g_cameraObject, g_stopPreviewMethodId);
+    env->CallVoidMethod(g_CameraObject, g_StopPreviewMethodId);
     Detach(env);
 }
 
 void CameraPlatform_UpdateCapture()
 {
-	if(g_frameLock)
+	if(g_FrameLock)
 	{
-        int width = CAMERA_WIDTH;
-        int height = CAMERA_HEIGHT;
+        // the video buffer is in landscape mode
+        int width = g_Height;
+        int height = g_Width;
         int numChannels = 4;
         uint8_t* out;
         uint32_t outsize;
         dmBuffer::GetBytes(g_VideoBuffer, (void**)&out, &outsize);
 
-        uint32_t* data = (uint32_t*)g_data;
+        uint32_t* data = (uint32_t*)g_Data;
         for( int y = 0; y < height; ++y)
         {
             for( int x = 0; x < width; ++x)
@@ -199,7 +223,7 @@ void CameraPlatform_UpdateCapture()
                 out[index+2] = (argb>>16)&0xFF;	// B
             }
         }
-		g_frameLock = false;
+		g_FrameLock = false;
 	}
 }
 

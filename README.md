@@ -14,7 +14,7 @@ Or point to the ZIP file of [a specific release](https://github.com/defold/exten
 
 # Supported platforms
 
-The currently supported platforms are: OSX + iOS
+The currently supported platforms are macOS, iOS and Android
 
 
 # FAQ
@@ -52,10 +52,10 @@ camera.CAPTURE_QUALITY_LOW
 ## Status constants
 
 ```lua
-camera.STATUS_STARTED
-camera.STATUS_STOPPED
-camera.STATUS_NOT_PERMITTED
-camera.STATUS_ERROR
+camera.CAMERA_STARTED
+camera.CAMERA_STOPPED
+camera.CAMERA_NOT_PERMITTED
+camera.CAMERA_ERROR
 ```
 
 
@@ -64,8 +64,8 @@ camera.STATUS_ERROR
 Start camera capture using the specified camera (front/back) and capture quality. This may trigger a camera usage permission popup. When the popup has been dismissed the callback will be invoked with camera start status.
 
 ```lua
-camera.start_capture(camera.CAMERA_TYPE_BACK, camera.CAPTURE_QUALITY_HIGH, function(self, status)
-    if status == camera.STATUS_STARTED then
+camera.start_capture(camera.CAMERA_TYPE_BACK, camera.CAPTURE_QUALITY_HIGH, function(self, message)
+    if message == camera.CAMERA_STARTED then
         -- do stuff
     end
 end)
