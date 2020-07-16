@@ -19,7 +19,6 @@ static CameraType g_Type;
 static CaptureQuality g_Quality;
 
 static dmBuffer::HBuffer* g_Buffer = 0;
-static dmBuffer::HBuffer g_VideoBuffer = 0;
 
 
 static JNIEnv* Attach()
@@ -77,35 +76,23 @@ JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_queueMessage
 
 JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_captureStarted(JNIEnv * env, jobject jobj, jint width, jint height)
 {
-    // As default behavior, we want portrait mode
-    if (width > height) {
-        uint32_t tmp = width;
-        width = height;
-        height = tmp;
-    }
-
     g_Width = (uint32_t)width;
     g_Height = (uint32_t)height;
 
-    if (g_Data)
-    {
-        delete g_Data;
-    }
     uint32_t size = g_Width * g_Height;
+    delete g_Data;
     g_Data = new jint[size];
     dmBuffer::StreamDeclaration streams_decl[] = {
         {dmHashString64("rgb"), dmBuffer::VALUE_TYPE_UINT8, 3}
     };
     dmBuffer::Create(size, streams_decl, 1, g_Buffer);
-
-    g_VideoBuffer = *g_Buffer;
 }
 
 
 void CameraPlatform_GetCameraInfo(CameraInfo& outparams)
 {
-    outparams.m_Width = g_Width;
-    outparams.m_Height = g_Height;
+    outparams.m_Width = (g_Width > g_Height) ? g_Height : g_Width;
+    outparams.m_Height = (g_Width > g_Height) ? g_Width : g_Height;
     outparams.m_Type = g_Type;
 }
 
@@ -199,13 +186,12 @@ void CameraPlatform_UpdateCapture()
 {
 	if(g_FrameLock)
 	{
-        // the video buffer is in landscape mode
-        int width = g_Height;
-        int height = g_Width;
+        int width = g_Width;
+        int height = g_Height;
         int numChannels = 4;
         uint8_t* out;
         uint32_t outsize;
-        dmBuffer::GetBytes(g_VideoBuffer, (void**)&out, &outsize);
+        dmBuffer::GetBytes(*g_Buffer, (void**)&out, &outsize);
 
         uint32_t* data = (uint32_t*)g_Data;
         for( int y = 0; y < height; ++y)
