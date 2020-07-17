@@ -10,7 +10,7 @@
 #define DLIB_LOG_DOMAIN LIB_NAME
 #include <dmsdk/sdk.h>
 
-#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_OSX)
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_OSX) || defined(DM_PLATFORM_ANDROID)
 
 #include <unistd.h>
 #include "camera_private.h"
@@ -27,22 +27,23 @@ struct DefoldCamera
     // Information about the currently set camera
     CameraInfo  m_Params;
 
-    dmArray<CameraStatus> m_MessageQueue;
+    dmArray<CameraMessage> m_MessageQueue;
     dmScript::LuaCallbackInfo* m_Callback;
     dmMutex::HMutex m_Mutex;
 };
 
 DefoldCamera g_DefoldCamera;
 
-void Camera_QueueMessage(CameraStatus status)
+void Camera_QueueMessage(CameraMessage message)
 {
+    dmLogInfo("Camera_QueueMessage %d", message);
     DM_MUTEX_SCOPED_LOCK(g_DefoldCamera.m_Mutex);
 
     if (g_DefoldCamera.m_MessageQueue.Full())
     {
         g_DefoldCamera.m_MessageQueue.OffsetCapacity(1);
     }
-    g_DefoldCamera.m_MessageQueue.Push(status);
+    g_DefoldCamera.m_MessageQueue.Push(message);
 }
 
 static void Camera_ProcessQueue()
@@ -56,22 +57,22 @@ static void Camera_ProcessQueue()
         {
             break;
         }
-        CameraStatus status = g_DefoldCamera.m_MessageQueue[i];
+        CameraMessage message = g_DefoldCamera.m_MessageQueue[i];
 
-        if (status == STATUS_STARTED)
+        if (message == CAMERA_STARTED)
         {
             // Increase ref count
             dmScript::LuaHBuffer luabuffer = {g_DefoldCamera.m_VideoBuffer, false};
             dmScript::PushBuffer(L, luabuffer);
             g_DefoldCamera.m_VideoBufferLuaRef = dmScript::Ref(L, LUA_REGISTRYINDEX);
         }
-        else if (status == STATUS_STOPPED)
+        else if (message == CAMERA_STOPPED)
         {
             dmScript::Unref(L, LUA_REGISTRYINDEX, g_DefoldCamera.m_VideoBufferLuaRef); // We want it destroyed by the GC
             g_DefoldCamera.m_VideoBufferLuaRef = 0;
         }
 
-        lua_pushnumber(L, (lua_Number)status);
+        lua_pushnumber(L, (lua_Number)message);
         int ret = lua_pcall(L, 2, 0, 0);
         if (ret != 0)
         {
@@ -101,7 +102,7 @@ static int StartCapture(lua_State* L)
     Camera_DestroyCallback();
     g_DefoldCamera.m_Callback = dmScript::CreateCallback(L, 3);
 
-    CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality, g_DefoldCamera.m_Params);
+    CameraPlatform_StartCapture(&g_DefoldCamera.m_VideoBuffer, type, quality);
 
     return 1;
 }
@@ -119,6 +120,7 @@ static int GetInfo(lua_State* L)
 {
     DM_LUA_STACK_CHECK(L, 1);
 
+    CameraPlatform_GetCameraInfo(g_DefoldCamera.m_Params);
     lua_newtable(L);
     lua_pushstring(L, "width");
     lua_pushnumber(L, g_DefoldCamera.m_Params.m_Width);
@@ -176,10 +178,10 @@ static void LuaInit(lua_State* L)
     SETCONSTANT(CAPTURE_QUALITY_MEDIUM)
     SETCONSTANT(CAPTURE_QUALITY_HIGH)
 
-    SETCONSTANT(STATUS_STARTED)
-    SETCONSTANT(STATUS_STOPPED)
-    SETCONSTANT(STATUS_NOT_PERMITTED)
-    SETCONSTANT(STATUS_ERROR)
+    SETCONSTANT(CAMERA_STARTED)
+    SETCONSTANT(CAMERA_STOPPED)
+    SETCONSTANT(CAMERA_NOT_PERMITTED)
+    SETCONSTANT(CAMERA_ERROR)
 
     #undef SETCONSTANT
 
@@ -197,11 +199,13 @@ dmExtension::Result InitializeCamera(dmExtension::Params* params)
 {
     LuaInit(params->m_L);
     g_DefoldCamera.m_Mutex = dmMutex::New();
+    CameraPlatform_Initialize();
     return dmExtension::RESULT_OK;
 }
 
 static dmExtension::Result UpdateCamera(dmExtension::Params* params)
 {
+    CameraPlatform_UpdateCapture();
     Camera_ProcessQueue();
     return dmExtension::RESULT_OK;
 }
