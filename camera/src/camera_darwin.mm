@@ -359,7 +359,7 @@ void CameraPlatform_GetCameraInfo(CameraInfo& outparams)
     outparams.m_Height = g_Camera.m_Height;
 }
 
-int CameraPlatform_Initialize(uint32_t width, uint32_t height)
+int CameraPlatform_Initialize()
 {
     return 1;
 }
