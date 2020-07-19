@@ -238,7 +238,6 @@ static dmExtension::Result InitializeCamera(dmExtension::Params* params)
 
 static dmExtension::Result UpdateCamera(dmExtension::Params* params)
 {
-    Camera_ProcessQueue()
     return dmExtension::RESULT_OK;
 }
 
