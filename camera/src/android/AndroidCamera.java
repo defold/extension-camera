@@ -7,7 +7,7 @@ import android.app.FragmentManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.Manifest;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
