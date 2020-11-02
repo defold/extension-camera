@@ -12,7 +12,7 @@ jobs:
             uses: defold/repository-dispatch@1.2.1,
             with: {
                 repo: 'defold/defold.github.io',
-                token: '${{ secrets.GITHUB_TOKEN }}',
+                token: '${{ secrets.SERVICES_GITHUB_TOKEN }}',
                 user: 'services@defold.se',
                 action: 'extension-camera'
             }
