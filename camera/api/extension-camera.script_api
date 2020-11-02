@@ -1,0 +1,121 @@
+- name: camera
+  type: table
+  desc: Provides functionality to capture images using the camera. Supported on macOS, iOS and Android.
+        [icon:ios] [icon:android]
+  members:
+
+#*****************************************************************************************************
+
+  - name: start_capture
+    type: function
+    desc: Start camera capture using the specified camera (front/back) and capture quality. This may trigger a camera usage permission popup. When the popup has been dismissed the callback will be invoked with camera start status.
+
+    members:
+    - name: type
+      type: string
+      desc: Which camera to use, font or back.
+    - name: quality
+      type: string
+      desc: Quality of the captured image.
+    - name: callback
+      type: function
+      desc: |-
+            The function to call camera state has changed.
+
+    examples:
+    - desc: |-
+            ```lua
+            camera.start_capture(camera.CAMERA_TYPE_BACK, camera.CAPTURE_QUALITY_HIGH, function(self, message)
+                if message == camera.CAMERA_STARTED then
+                    -- do stuff
+                end
+            end)
+            ```
+
+#*****************************************************************************************************
+
+  - name: stop_capture
+    type: function
+    desc: Stops a previously started capture session.
+
+    examples:
+    - desc: |-
+            ```lua
+            camera.stop_capture()
+            ```
+
+#*****************************************************************************************************
+
+  - name: get_info
+    type: function
+    desc: Gets the info from the current capture session.
+    return:
+    - name: info
+      type: table
+      desc: Information about the camera.
+
+    examples:
+    - desc: |-
+            ```lua
+            local info = camera.get_info()
+            print("width", info.width)
+            print("height", info.height)
+            ```
+
+#*****************************************************************************************************
+
+  - name: get_frame
+    type: function
+    desc: Get captured frame.
+    return:
+    - name: frame
+      type: buffer
+      desc: Retrieves the camera pixel buffer. This buffer has one stream named "rgb", and is of type `buffer.VALUE_TYPE_UINT8` and has the value count of 1.
+
+    examples:
+    - desc: |-
+            ```lua
+            self.cameraframe = camera.get_frame()
+            ```
+
+#*****************************************************************************************************
+
+  - name: CAMERA_TYPE_FRONT
+    type: string
+    desc: Constant for the front camera.
+
+  - name: CAMERA_TYPE_BACK
+    type: string
+    desc: Constant for the back camera.
+
+#*****************************************************************************************************
+
+  - name: CAPTURE_QUALITY_HIGH
+    type: string
+    desc: High quality capture session.
+
+  - name: CAPTURE_QUALITY_MEDIUM
+    type: string
+    desc: Medium quality capture session.
+
+  - name: CAPTURE_QUALITY_LOW
+    type: string
+    desc: Low quality capture session.
+
+#*****************************************************************************************************
+
+  - name: CAMERA_STARTED
+    type: string
+    desc: The capture session has started.
+
+  - name: CAMERA_STOPPED
+    type: string
+    desc: The capture session has stopped.
+
+  - name: CAMERA_NOT_PERMITTED
+    type: string
+    desc: The user did not give permission to start the capture session.
+
+  - name: CAMERA_ERROR
+    type: string
+    desc: Something went wrong when starting the capture session.
