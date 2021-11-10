@@ -3,6 +3,7 @@
 #if defined(DM_PLATFORM_ANDROID)
 
 #include "camera_private.h"
+#include <dmsdk/dlib/android.h>
 
 static jclass		g_CameraClass = 0;
 static jobject		g_CameraObject = 0;
@@ -20,53 +21,20 @@ static CaptureQuality g_Quality;
 
 static dmBuffer::HBuffer* g_Buffer = 0;
 
-
-static JNIEnv* Attach()
-{
-  JNIEnv* env;
-  JavaVM* vm = dmGraphics::GetNativeAndroidJavaVM();
-  vm->AttachCurrentThread(&env, NULL);
-  return env;
-}
-
-static bool Detach(JNIEnv* env)
-{
-  bool exception = (bool) env->ExceptionCheck();
-  env->ExceptionClear();
-  JavaVM* vm = dmGraphics::GetNativeAndroidJavaVM();
-  vm->DetachCurrentThread();
-  return !exception;
-}
-
-static jclass GetClass(JNIEnv* env, const char* classname)
-{
-    jclass activity_class = env->FindClass("android/app/NativeActivity");
-    jmethodID get_class_loader = env->GetMethodID(activity_class,"getClassLoader", "()Ljava/lang/ClassLoader;");
-    jobject cls = env->CallObjectMethod(dmGraphics::GetNativeAndroidActivity(), get_class_loader);
-    jclass class_loader = env->FindClass("java/lang/ClassLoader");
-    jmethodID find_class = env->GetMethodID(class_loader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
-
-    jstring str_class_name = env->NewStringUTF(classname);
-    jclass outcls = (jclass)env->CallObjectMethod(cls, find_class, str_class_name);
-    env->DeleteLocalRef(str_class_name);
-    return outcls;
-}
-
-
 extern "C"
 {
-	JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_frameUpdate(JNIEnv * env, jobject jobj, jintArray data);
+    JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_frameUpdate(JNIEnv * env, jobject jobj, jintArray data);
     JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_queueMessage(JNIEnv * env, jobject jobj, jint message);
     JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_captureStarted(JNIEnv * env, jobject jobj, jint width, jint height);
 }
 
 JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_frameUpdate(JNIEnv * env, jobject jobj, jintArray data)
 {
-	if(!g_FrameLock)
-	{
-		env->GetIntArrayRegion(data, 0, g_Width * g_Height, g_Data);
-		g_FrameLock = true;
-	}
+    if(!g_FrameLock)
+    {
+        env->GetIntArrayRegion(data, 0, g_Width * g_Height, g_Data);
+        g_FrameLock = true;
+    }
 }
 
 JNIEXPORT void JNICALL Java_com_defold_android_camera_AndroidCamera_queueMessage(JNIEnv * env, jobject jobj, jint message)
@@ -98,19 +66,15 @@ void CameraPlatform_GetCameraInfo(CameraInfo& outparams)
 
 int CameraPlatform_Initialize()
 {
-    JNIEnv* env = Attach();
-    if(!env)
-    {
-        return false;
-    }
+    dmAndroid::ThreadAttacher threadAttacher;
+    JNIEnv* env = threadAttacher.GetEnv();
 
     // get the AndroidCamera class
-    jclass tmp = GetClass(env, "com.defold.android.camera/AndroidCamera");
+    jclass tmp = dmAndroid::LoadClass(env, "com.defold.android.camera/AndroidCamera");
     g_CameraClass = (jclass)env->NewGlobalRef(tmp);
     if(!g_CameraClass)
     {
         dmLogError("Could not find class 'com.defold.android.camera/AndroidCamera'.");
-        Detach(env);
         return false;
     }
 
@@ -119,7 +83,6 @@ int CameraPlatform_Initialize()
     if(!g_GetCameraMethodId)
     {
         dmLogError("Could not get static method 'getCamera'.");
-        Detach(env);
         return false;
     }
 
@@ -128,7 +91,6 @@ int CameraPlatform_Initialize()
     if(!g_CameraObject)
     {
         dmLogError("Could not create instance.");
-        Detach(env);
         return false;
     }
 
@@ -137,18 +99,15 @@ int CameraPlatform_Initialize()
     if(!g_StartPreviewMethodId)
     {
         dmLogError("Could not get startPreview() method.");
-        Detach(env);
         return false;
     }
     g_StopPreviewMethodId = env->GetMethodID(g_CameraClass, "stopPreview", "()V");
     if(!g_StopPreviewMethodId)
     {
         dmLogError("Could not get stopPreview() method.");
-        Detach(env);
         return false;
     }
 
-    Detach(env);
     return true;
 }
 
@@ -164,9 +123,9 @@ void CameraPlatform_StartCapture(dmBuffer::HBuffer* buffer, CameraType type, Cap
     g_Type = type;
     g_Quality = quality;
 
-    JNIEnv* env = Attach();
-	env->CallVoidMethod(g_CameraObject, g_StartPreviewMethodId);
-	Detach(env);
+    dmAndroid::ThreadAttacher threadAttacher;
+    JNIEnv* env = threadAttacher.GetEnv();
+    env->CallVoidMethod(g_CameraObject, g_StartPreviewMethodId);
 }
 
 void CameraPlatform_StopCapture()
@@ -177,15 +136,15 @@ void CameraPlatform_StopCapture()
         return;
     }
 
-    JNIEnv* env = Attach();
+    dmAndroid::ThreadAttacher threadAttacher;
+    JNIEnv* env = threadAttacher.GetEnv();
     env->CallVoidMethod(g_CameraObject, g_StopPreviewMethodId);
-    Detach(env);
 }
 
 void CameraPlatform_UpdateCapture()
 {
-	if(g_FrameLock)
-	{
+    if(g_FrameLock)
+    {
         int width = g_Width;
         int height = g_Height;
         int numChannels = 4;
@@ -209,8 +168,8 @@ void CameraPlatform_UpdateCapture()
                 out[index+2] = (argb>>16)&0xFF;	// B
             }
         }
-		g_FrameLock = false;
-	}
+        g_FrameLock = false;
+    }
 }
 
 #endif // DM_PLATFORM_ANDROID

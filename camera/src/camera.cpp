@@ -48,16 +48,25 @@ void Camera_QueueMessage(CameraMessage message)
 
 static void Camera_ProcessQueue()
 {
-    DM_MUTEX_SCOPED_LOCK(g_DefoldCamera.m_Mutex);
+    if (g_DefoldCamera.m_MessageQueue.Empty())
+    {
+        return;
+    }
 
-    for (uint32_t i = 0; i != g_DefoldCamera.m_MessageQueue.Size(); ++i)
+    dmArray<CameraMessage> tmp;
+    {
+        DM_MUTEX_SCOPED_LOCK(g_DefoldCamera.m_Mutex);
+        tmp.Swap(g_DefoldCamera.m_MessageQueue);
+    }
+
+    for (uint32_t i = 0; i != tmp.Size(); ++i)
     {
         lua_State* L = dmScript::GetCallbackLuaContext(g_DefoldCamera.m_Callback);
         if (!dmScript::SetupCallback(g_DefoldCamera.m_Callback))
         {
             break;
         }
-        CameraMessage message = g_DefoldCamera.m_MessageQueue[i];
+        CameraMessage message = tmp[i];
 
         if (message == CAMERA_STARTED)
         {
@@ -80,7 +89,6 @@ static void Camera_ProcessQueue()
         }
         dmScript::TeardownCallback(g_DefoldCamera.m_Callback);
     }
-    g_DefoldCamera.m_MessageQueue.SetSize(0);
 }
 
 static void Camera_DestroyCallback()
