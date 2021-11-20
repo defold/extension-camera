@@ -148,9 +148,9 @@ public class AndroidCamera extends Fragment
 				break;
 		}
 
-		if (focusModes.contains(Parameters.FOCUS_MODE_CONTINUOUS_PICTURE))
+		if (focusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE))
 		{
-			params.setFocusMode(Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+			params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
 		}
 
 		params.setPreviewSize(this.size.width, this.size.height);
