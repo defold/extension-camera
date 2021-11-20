@@ -45,7 +45,7 @@ public class AndroidCamera extends Fragment
 	private boolean newFrame;
 	private int position;
 	private int quality;
-	private Camera.Size size;
+	private Camera.Size previewSize;
 
 	private static Context context;
 
@@ -132,19 +132,26 @@ public class AndroidCamera extends Fragment
 
 		Camera.Parameters params = camera.getParameters();
 
-		List<Camera.Size> sizes = params.getSupportedPreviewSizes();
+		List<Camera.Size> previewSizes = params.getSupportedPreviewSizes();
 		List<String> focusModes = params.getSupportedFocusModes();
+		List<Camera.Size> pictureSizes = params.getSupportedPictureSizes();
+		List<Integer> supportedFormats = params.getSupportedPictureFormats();
+
+		Camera.Size pictureSize;
 		switch(this.quality)
 		{
 			case CAPTURE_QUALITY_HIGH:
-				this.size = sizes.get(sizes.size() - 1);
+				this.previewSize = previewSizes.get(previewSizes.size() - 1);
+				pictureSize = pictureSizes.get(previewSizes.size() - 1);
 				break;
 			case CAPTURE_QUALITY_LOW:
-				this.size = sizes.get(0);
+				this.previewSize = previewSizes.get(0);
+				pictureSize = pictureSizes.get(0);
 				break;
 			case CAPTURE_QUALITY_MEDIUM:
 			default:
-				this.size = sizes.get((int)Math.ceil(sizes.size() / 2));
+				this.previewSize = previewSizes.get((int)Math.ceil(previewSizes.size() / 2));
+				pictureSize = pictureSizes.get((int)Math.ceil(previewSizes.size() / 2));
 				break;
 		}
 
@@ -153,10 +160,15 @@ public class AndroidCamera extends Fragment
 			params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
 		}
 
-		params.setPreviewSize(this.size.width, this.size.height);
-		params.setPictureSize(this.size.width, this.size.height);
-		params.setPictureFormat(PixelFormat.JPEG);
-		params.setJpegQuality(90);
+		params.setPreviewSize(this.previewSize.width, this.previewSize.height);
+		params.setPictureSize(pictureSize.width, pictureSize.height);
+
+		if (supportedFormats.contains(PixelFormat.JPEG))
+		{
+			params.setPictureFormat(PixelFormat.JPEG);
+			params.setJpegQuality(90);
+		}
+
 		camera.setParameters(params);
 
 		final Activity activity = (Activity)context;
@@ -171,7 +183,7 @@ public class AndroidCamera extends Fragment
 				if(rotation == Surface.ROTATION_180 || rotation == Surface.ROTATION_270)
 				flip = true;
 
-				int[] pixels = convertYUV420_NV21toARGB8888(data, AndroidCamera.this.size.width, AndroidCamera.this.size.height, flip);
+				int[] pixels = convertYUV420_NV21toARGB8888(data, AndroidCamera.this.previewSize.width, AndroidCamera.this.previewSize.height, flip);
 				frameUpdate(pixels);
 			}
 		});
@@ -184,7 +196,7 @@ public class AndroidCamera extends Fragment
 		{
 		}
 
-		captureStarted(this.size.width, this.size.height);
+		captureStarted(this.previewSize.width, this.previewSize.height);
 		camera.startPreview();
 		queueMessage(CAMERA_STARTED);
 	}
