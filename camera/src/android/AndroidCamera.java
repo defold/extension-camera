@@ -133,6 +133,7 @@ public class AndroidCamera extends Fragment
 		Camera.Parameters params = camera.getParameters();
 
 		List<Camera.Size> sizes = params.getSupportedPreviewSizes();
+		List<String> focusModes = params.getSupportedFocusModes();
 		switch(this.quality)
 		{
 			case CAPTURE_QUALITY_HIGH:
@@ -147,11 +148,15 @@ public class AndroidCamera extends Fragment
 				break;
 		}
 
+		if (focusModes.contains(Parameters.FOCUS_MODE_CONTINUOUS_PICTURE))
+		{
+			params.setFocusMode(Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+		}
+
 		params.setPreviewSize(this.size.width, this.size.height);
 		params.setPictureSize(this.size.width, this.size.height);
 		params.setPictureFormat(PixelFormat.JPEG);
 		params.setJpegQuality(90);
-		params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
 		camera.setParameters(params);
 
 		final Activity activity = (Activity)context;
