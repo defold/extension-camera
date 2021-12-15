@@ -7,7 +7,6 @@
 #define MODULE_NAME "camera"
 
 // Defold SDK
-#define DLIB_LOG_DOMAIN LIB_NAME
 #include <dmsdk/sdk.h>
 
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_OSX) || defined(DM_PLATFORM_ANDROID)
@@ -71,7 +70,7 @@ static void Camera_ProcessQueue()
         if (message == CAMERA_STARTED)
         {
             // Increase ref count
-            dmScript::LuaHBuffer luabuffer = {g_DefoldCamera.m_VideoBuffer, false};
+            dmScript::LuaHBuffer luabuffer(g_DefoldCamera.m_VideoBuffer, dmScript::OWNER_C);
             dmScript::PushBuffer(L, luabuffer);
             g_DefoldCamera.m_VideoBufferLuaRef = dmScript::Ref(L, LUA_REGISTRYINDEX);
         }
