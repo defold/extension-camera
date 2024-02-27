@@ -3,7 +3,6 @@ local function stop_capture(self)
     if self.cameraframe == nil then
         return
     end
-
     self.cameraframe = nil
     camera.stop_capture()
 
@@ -24,7 +23,7 @@ local function start_capture(self)
         type = camera.CAMERA_TYPE_BACK
         quality = camera.CAPTURE_QUALITY_MEDIUM
     end
-
+    
     camera.start_capture(type, quality, function(self, status)
         if status == camera.CAMERA_STARTED then
             self.cameraframe = camera.get_frame()
