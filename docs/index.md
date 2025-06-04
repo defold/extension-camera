@@ -35,6 +35,3 @@ tccutil reset Camera
 ## Source code
 
 The source code is available on [GitHub](https://github.com/defold/extension-camera)
-
-
-## API reference
