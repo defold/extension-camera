@@ -31,8 +31,8 @@ local function start_capture(self)
             self.cameratextureheader = {
                 width=self.camerainfo.width,
                 height=self.camerainfo.height,
-                type=resource.TEXTURE_TYPE_2D,
-                format=resource.TEXTURE_FORMAT_RGB,
+                type=graphics.TEXTURE_TYPE_2D,
+                format=graphics.TEXTURE_FORMAT_RGB,
                 num_mip_maps=1
             }
             label.set_text("logo#status", "Capture Status: ON")
@@ -48,8 +48,8 @@ function init(self)
     msg.post(".", "acquire_input_focus")
 
     local logosize = 128
-    local screen_width = sys.get_config("display.width", 600)
-    local screen_height = sys.get_config("display.height", 800)
+    local screen_width = sys.get_config_int("display.width", 600)
+    local screen_height = sys.get_config_int("display.height", 800)
     local scale_width = screen_width / logosize
     local scale_height = screen_height / logosize
 
