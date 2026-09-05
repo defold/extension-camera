@@ -1,0 +1,2 @@
+# Native code loads the extension's Java bridge and methods by name through JNI.
+-keep,allowoptimization class com.defold.android.camera.** { *; }
